@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nidra"
+version = "0.1.0"
+description = "The sleep cycle for AI memory: every memory carries its evidence; a scheduled pass keeps the evidence honest."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Prashant Pandey" }]
+requires-python = ">=3.9"
+keywords = ["ai", "memory", "llm", "agents", "consolidation", "provenance", "evidence"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.optional-dependencies]
+judge = ["anthropic"]
+
+[project.scripts]
+nidra = "nidra.cli:main"
+
+[project.urls]
+Repository = "https://github.com/prashantpandey-creator/nidra"
+
+[tool.setuptools]
+packages = ["nidra"]
