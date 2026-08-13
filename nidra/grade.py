@@ -15,9 +15,22 @@ re-verified against its source bytes, none drifted).
 from __future__ import annotations
 
 import os
+from functools import lru_cache
 from typing import Any, Dict, List, Tuple
 
 from .store import sha256_text
+
+
+@lru_cache(maxsize=128)
+def _read_source(path: str, mtime_ns: int, size: int) -> str:
+    # mtime_ns + size key the cache: a changed file is a different entry.
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        return fh.read()
+
+
+def _source_content(path: str) -> str:
+    st = os.stat(path)
+    return _read_source(path, st.st_mtime_ns, st.st_size)
 
 
 def verify_evidence_row(ev: Dict[str, Any]) -> Tuple[str, str]:
@@ -33,8 +46,7 @@ def verify_evidence_row(ev: Dict[str, Any]) -> Tuple[str, str]:
     if not os.path.exists(source):
         return "source_missing", "source not found: %s" % source
     try:
-        with open(source, encoding="utf-8", errors="replace") as fh:
-            content = fh.read()
+        content = _source_content(source)
     except OSError as exc:
         return "source_missing", str(exc)
     if excerpt in content:

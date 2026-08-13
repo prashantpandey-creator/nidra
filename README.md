@@ -63,6 +63,40 @@ nidra why mem_a1b2c3d4e5f6   # the memory, its excerpts, their hashes,
                              # and a live re-check against the source bytes
 ```
 
+## First dogfood: grading a real palace
+
+Nidra ships a **MemPalace adapter** ([MemPalace](https://github.com/MemPalace/mempalace)
+mines conversations into a ChromaDB "palace"). The adapter reads the palace
+strictly read-only and turns drawers into graded memories whose evidence points
+back at the original transcript bytes:
+
+```bash
+nidra import-mempalace --room decisions --dir palace-audit
+nidra sleep --dir palace-audit --report trust-report.md
+```
+
+We ran it on the 557,000-drawer palace Nidra was born next to — the
+`decisions` and `problems` rooms, 4,063 drawers, graded in **0.4 seconds**:
+
+| finding | count | share |
+|---|---:|---:|
+| still traceable to source bytes (`machine_checked`) | 482 | 12.6% |
+| source transcript no longer exists (`source_linked`) | 3,266 | 85.5% |
+| source exists but no longer contains the text (`drifted`) | 21 | 0.5% |
+| no escaping-proof anchor (`unverified`, honest) | 52 | 1.4% |
+
+Read that middle row again: **85% of this archive's receipts point at files
+that are gone.** The memories may well be true — but nothing can re-verify
+them anymore, and before this pass, nothing knew. Memory rot is real,
+measurable, and silent; Nidra is the instrument that measures it.
+
+One methodological note we're proud of: our first run reported 114 drifted
+memories. A hand spot-check showed most were *our own artifact* — anchors
+polluted by the palace's rendering prefixes and non-ASCII escaping variance —
+so the anchor rules got stricter (pure printable ASCII, prefixes stripped),
+false drift collapsed to 21 genuine cases, and the spot-check is now a test.
+The audit must survive auditing itself.
+
 ## The grades
 
 A memory's `evidence_status` is earned, never asserted:
@@ -152,8 +186,8 @@ problem; honesty is not.
 
 ## Roadmap
 
-- **MemPalace adapter** — mine drawers into graded memories (Nidra was born
-  next to a 557,000-drawer MemPalace whose read path nobody had wired).
+- ~~MemPalace adapter~~ — **shipped** (`nidra import-mempalace`; see the
+  dogfood section above).
 - **mem0 / file-store adapters.**
 - **Published eval harness** — LongMemEval + LoCoMo with a runnable public
   harness. *Not yet run; no numbers claimed until it is.* In a market where

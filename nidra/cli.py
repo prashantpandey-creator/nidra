@@ -179,6 +179,19 @@ def run_demo(root: str, strict: bool = False, quiet: bool = False) -> int:
     return 0
 
 
+def cmd_import_mempalace(args) -> int:
+    from .adapters.mempalace import import_palace
+
+    store = _store(args)
+    if not store.exists():
+        store.init()
+    summary = import_palace(
+        store, palace=args.palace, wing=args.wing, room=args.room, limit=args.limit
+    )
+    print(json.dumps(summary, indent=2))
+    return 0
+
+
 def cmd_demo(args) -> int:
     return run_demo(args.dir, strict=args.strict)
 
@@ -211,6 +224,17 @@ def main(argv=None) -> int:
     p.add_argument("id")
     p.add_argument("--dir", default=".nidra")
     p.set_defaults(fn=cmd_why)
+
+    p = sub.add_parser(
+        "import-mempalace",
+        help="import MemPalace drawers as graded memories (palace is read-only)",
+    )
+    p.add_argument("--dir", default=".nidra")
+    p.add_argument("--palace", default="~/.mempalace")
+    p.add_argument("--wing")
+    p.add_argument("--room")
+    p.add_argument("--limit", type=int)
+    p.set_defaults(fn=cmd_import_mempalace)
 
     p = sub.add_parser("demo", help="plant known defects and prove the pass catches them")
     p.add_argument("--dir", default=".nidra-demo")
