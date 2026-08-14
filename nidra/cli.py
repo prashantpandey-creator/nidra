@@ -192,6 +192,14 @@ def cmd_import_mempalace(args) -> int:
     return 0
 
 
+def cmd_eval_longmemeval(args) -> int:
+    from .eval.longmemeval import run as run_eval
+
+    result = run_eval(args.data, args.workdir, k=args.k, limit=args.limit)
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def cmd_demo(args) -> int:
     return run_demo(args.dir, strict=args.strict)
 
@@ -235,6 +243,16 @@ def main(argv=None) -> int:
     p.add_argument("--room")
     p.add_argument("--limit", type=int)
     p.set_defaults(fn=cmd_import_mempalace)
+
+    p = sub.add_parser(
+        "eval-longmemeval",
+        help="run the LongMemEval harness (keyless evidence recall@k)",
+    )
+    p.add_argument("--data", required=True, help="path to a LongMemEval JSON file")
+    p.add_argument("--workdir", default=".nidra-longmemeval")
+    p.add_argument("--k", type=int, default=5)
+    p.add_argument("--limit", type=int)
+    p.set_defaults(fn=cmd_eval_longmemeval)
 
     p = sub.add_parser("demo", help="plant known defects and prove the pass catches them")
     p.add_argument("--dir", default=".nidra-demo")

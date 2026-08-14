@@ -116,6 +116,44 @@ so the anchor rules got stricter (pure printable ASCII, prefixes stripped),
 false drift collapsed to 21 genuine cases, and the spot-check is now a test.
 The audit must survive auditing itself.
 
+## LongMemEval — the harness ships before the number
+
+The eval harness is in the box and keyless: `nidra eval-longmemeval` runs the
+real pipeline per question — materialize the haystack, ingest turns as
+memories with evidence anchors, sleep, retrieve top-k — and reports **evidence
+recall@k**: did the top-k retrieved memories include one from a labeled answer
+session? Deterministic, no generation, no LLM judge, nothing to dispute.
+
+```bash
+# data: huggingface.co/datasets/xiaowu0162/longmemeval
+nidra eval-longmemeval --data longmemeval_s.json --workdir lme-work
+```
+
+Our run on **longmemeval_s** (all 500 questions; 470 scored, 30 abstention
+variants excluded; 72.9s on a laptop; retrieval is a plain stdlib tf-idf —
+Nidra is the pipeline under test, not a retriever):
+
+| question type | n | evidence recall@5 |
+|---|---:|---:|
+| knowledge-update | 72 | **1.000** |
+| single-session-assistant | 56 | 0.964 |
+| single-session-user | 64 | 0.953 |
+| multi-session | 121 | 0.942 |
+| temporal-reasoning | 127 | 0.874 |
+| single-session-preference | 30 | 0.467 |
+| **overall** | **470** | **0.906** |
+
+Two honest notes. First, the weak row is real and expected: preference
+questions are paraphrase-heavy, and a lexical scorer misses paraphrase — plug
+in an embedding retriever if you need that row. Second, recall definitions
+vary across papers; ours is stated above and implemented in ~30 lines you can
+read (`nidra/eval/longmemeval.py`), so compare definitions before comparing
+numbers. End-to-end QA accuracy needs model calls and is **not claimed** —
+the harness is public so the number can never precede the machine.
+
+Receipts held at benchmark scale too: of 230,739 turns ingested across the
+run, 98.9% earned `machine_checked` grades against their materialized sources.
+
 ## The grades
 
 A memory's `evidence_status` is earned, never asserted:
@@ -208,10 +246,11 @@ problem; honesty is not.
 - ~~MemPalace adapter~~ — **shipped** (`nidra import-mempalace`; see the
   dogfood section above).
 - **mem0 / file-store adapters.**
-- **Published eval harness** — LongMemEval + LoCoMo with a runnable public
-  harness. *Not yet run; no numbers claimed until it is.* In a market where
+- ~~Published eval harness (LongMemEval)~~ — **shipped and run** (evidence
+  recall@5 = 0.906 keyless; see the LongMemEval section). Still open: the
+  keyed QA-accuracy stage, and LoCoMo. In a market where
   [vendor benchmarks have failed reproduction](https://www.braintrust.dev/articles/best-ai-agent-memory-tools-2026),
-  we will ship the harness before the number.
+  the harness ships before the number — it just did.
 - **Full FSRS scheduling** (the v1 ladder is deliberately simple).
 - **Batch-API judge** for bulk arbitration at 50% pricing.
 

@@ -1,0 +1,106 @@
+[
+  {
+    "question_id": "mini_1",
+    "question_type": "single-session-user",
+    "question": "Which city did I move to for my new job at the observatory?",
+    "answer": "Tallinn",
+    "question_date": "2026/01/10 (Sat) 10:00",
+    "haystack_dates": ["2026/01/01 (Thu) 09:00", "2026/01/02 (Fri) 09:00", "2026/01/03 (Sat) 09:00"],
+    "haystack_session_ids": ["s1a", "s1b", "s1c"],
+    "haystack_sessions": [
+      [
+        {"role": "user", "content": "I finally moved to Tallinn for my new job at the observatory, the relocation took two weeks."},
+        {"role": "assistant", "content": "Congratulations on the move and the observatory position, that sounds like a wonderful change."}
+      ],
+      [
+        {"role": "user", "content": "My sourdough starter collapsed again, the kitchen is too cold for it to rise properly."},
+        {"role": "assistant", "content": "A cold kitchen slows fermentation, try proofing the dough inside the oven with the light on."}
+      ],
+      [
+        {"role": "user", "content": "The ferry schedule changed for the winter season and my commute is longer now."},
+        {"role": "assistant", "content": "Winter ferry timetables are usually reduced, checking the operator site each Friday helps."}
+      ]
+    ],
+    "answer_session_ids": ["s1a"]
+  },
+  {
+    "question_id": "mini_2",
+    "question_type": "multi-session",
+    "question": "How many total kilometers did I run across my two marathon training weekends?",
+    "answer": "58 kilometers",
+    "question_date": "2026/02/01 (Sun) 08:00",
+    "haystack_dates": ["2026/01/10 (Sat) 08:00", "2026/01/17 (Sat) 08:00", "2026/01/20 (Tue) 08:00"],
+    "haystack_session_ids": ["s2a", "s2b", "s2c"],
+    "haystack_sessions": [
+      [
+        {"role": "user", "content": "First marathon training weekend done, I ran 26 kilometers along the river path."},
+        {"role": "assistant", "content": "A 26 kilometer weekend is a strong base for marathon training, remember to rest."}
+      ],
+      [
+        {"role": "user", "content": "Second marathon training weekend finished with 32 kilometers in the hills."},
+        {"role": "assistant", "content": "32 kilometers of hill running builds real strength for the marathon."}
+      ],
+      [
+        {"role": "user", "content": "I repotted the ficus and the balcony garden finally looks tidy."},
+        {"role": "assistant", "content": "Ficus roots like the extra space, water it lightly for the first week."}
+      ]
+    ],
+    "answer_session_ids": ["s2a", "s2b"]
+  },
+  {
+    "question_id": "mini_3",
+    "question_type": "knowledge-update",
+    "question": "What is my current apartment door code after the building changed it?",
+    "answer": "4471",
+    "question_date": "2026/03/01 (Sun) 12:00",
+    "haystack_dates": ["2026/02/01 (Sun) 12:00", "2026/02/20 (Fri) 12:00"],
+    "haystack_session_ids": ["s3a", "s3b"],
+    "haystack_sessions": [
+      [
+        {"role": "user", "content": "For reference, my apartment door code is 9902 in the old building system."},
+        {"role": "assistant", "content": "Noted, the door code 9902 is saved for your reference."}
+      ],
+      [
+        {"role": "user", "content": "The building changed it, my current apartment door code is now 4471 after the update."},
+        {"role": "assistant", "content": "Understood, your current door code after the change is 4471."}
+      ]
+    ],
+    "answer_session_ids": ["s3b"]
+  },
+  {
+    "question_id": "mini_4",
+    "question_type": "temporal-reasoning",
+    "question": "When did the feline companion first arrive at our home?",
+    "answer": "March third",
+    "question_date": "2026/04/01 (Wed) 12:00",
+    "haystack_dates": ["2026/03/03 (Tue) 12:00", "2026/03/05 (Thu) 12:00"],
+    "haystack_session_ids": ["s4a", "s4b"],
+    "haystack_sessions": [
+      [
+        {"role": "user", "content": "We adopted a kitten yesterday and she hid beneath that old couch all night long."},
+        {"role": "assistant", "content": "Kittens usually hide during those early days, leaving food close by helps them settle."}
+      ],
+      [
+        {"role": "user", "content": "The home renovation started when the contractor first arrived at our place last week."},
+        {"role": "assistant", "content": "A renovation of the home always feels chaotic when crews first arrive, hang in there."}
+      ]
+    ],
+    "answer_session_ids": ["s4a"]
+  },
+  {
+    "question_id": "mini_5_abs",
+    "question_type": "single-session-user",
+    "question": "What did I say about my scuba certification?",
+    "answer": "No information available",
+    "question_date": "2026/05/01 (Fri) 12:00",
+    "haystack_dates": ["2026/04/20 (Mon) 12:00"],
+    "haystack_session_ids": ["s5a"],
+    "haystack_sessions": [
+      [
+        {"role": "user", "content": "The bakery downstairs started selling rye loaves on weekends."},
+        {"role": "assistant", "content": "Weekend rye sounds like a good reason to wake up early."}
+      ]
+    ],
+    "answer_session_ids": []
+  }
+]
