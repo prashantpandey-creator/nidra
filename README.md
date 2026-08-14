@@ -90,6 +90,25 @@ that are gone.** The memories may well be true — but nothing can re-verify
 them anymore, and before this pass, nothing knew. Memory rot is real,
 measurable, and silent; Nidra is the instrument that measures it.
 
+### Then the whole palace
+
+Two rooms were the rehearsal. The full audit — **all 558,151 drawers**, every
+wing — imported in 39 seconds and graded in one nine-minute sleep pass
+(474,779 active memories after 78,324 literal duplicate texts collapsed):
+
+| the whole mind, graded | count | share |
+|---|---:|---:|
+| still traceable to source bytes (`machine_checked`) | 107,794 | 22.7% |
+| source transcript no longer exists (`source_linked`) | 254,884 | 53.7% |
+| unverifiable (no escaping-proof anchor, or drifted) | 112,101 | 23.6% |
+| — of which **drifted**: source exists, text absent | 2,551 | 0.5% |
+
+Per room, the rot is uneven: `technical` (the biggest room, 323K memories)
+keeps 24.8% byte-traceable; `architecture` has lost 78% of its sources. In
+plain words: **of everything this half-million-drawer memory remembers, barely
+a fifth can still be re-verified against reality, and until this pass, nothing
+and nobody knew which fifth.** That sentence is the product.
+
 One methodological note we're proud of: our first run reported 114 drifted
 memories. A hand spot-check showed most were *our own artifact* — anchors
 polluted by the palace's rendering prefixes and non-ASCII escaping variance —
