@@ -15,7 +15,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 from .grade import verify_evidence_row
-from .judge import AnthropicJudge
+from .judge import auto_judge
 from .report import render_markdown
 from .sleep import run_sleep
 from .store import Store, new_memory
@@ -50,7 +50,7 @@ def cmd_add(args) -> int:
 
 def cmd_sleep(args) -> int:
     store = _store(args)
-    judge = AnthropicJudge(model=args.judge_model) if args.judge else None
+    judge = auto_judge(model=args.judge_model) if args.judge else None
     report = run_sleep(store, judge=judge)
     md = render_markdown(report)
     if args.report:
@@ -193,9 +193,22 @@ def cmd_import_mempalace(args) -> int:
 
 
 def cmd_eval_longmemeval(args) -> int:
-    from .eval.longmemeval import run as run_eval
+    if args.qa:
+        from .eval.longmemeval import run_qa
 
-    result = run_eval(args.data, args.workdir, k=args.k, limit=args.limit)
+        result = run_qa(
+            args.data,
+            args.workdir,
+            k=args.k,
+            limit=args.limit,
+            model=args.qa_model,
+            batch=args.batch,
+            workers=args.workers,
+        )
+    else:
+        from .eval.longmemeval import run as run_eval
+
+        result = run_eval(args.data, args.workdir, k=args.k, limit=args.limit)
     print(json.dumps(result, indent=2))
     return 0
 
@@ -224,8 +237,12 @@ def main(argv=None) -> int:
     p = sub.add_parser("sleep", help="run the consolidation pass")
     p.add_argument("--dir", default=".nidra")
     p.add_argument("--report", help="write the trust report to this markdown file")
-    p.add_argument("--judge", action="store_true", help="resolve contested pairs with an LLM")
-    p.add_argument("--judge-model", default="claude-haiku-4-5")
+    p.add_argument(
+        "--judge",
+        action="store_true",
+        help="resolve contested pairs via Claude Code (no API key; SDK fallback)",
+    )
+    p.add_argument("--judge-model", default="haiku")
     p.set_defaults(fn=cmd_sleep)
 
     p = sub.add_parser("why", help="show a memory with its receipts, re-checked live")
@@ -252,6 +269,14 @@ def main(argv=None) -> int:
     p.add_argument("--workdir", default=".nidra-longmemeval")
     p.add_argument("--k", type=int, default=5)
     p.add_argument("--limit", type=int)
+    p.add_argument(
+        "--qa",
+        action="store_true",
+        help="run the QA-accuracy stage through Claude Code (needs 'claude' login, no API key)",
+    )
+    p.add_argument("--qa-model", default="haiku")
+    p.add_argument("--batch", type=int, default=6)
+    p.add_argument("--workers", type=int, default=4)
     p.set_defaults(fn=cmd_eval_longmemeval)
 
     p = sub.add_parser("demo", help="plant known defects and prove the pass catches them")

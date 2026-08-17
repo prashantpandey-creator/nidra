@@ -148,8 +148,19 @@ questions are paraphrase-heavy, and a lexical scorer misses paraphrase — plug
 in an embedding retriever if you need that row. Second, recall definitions
 vary across papers; ours is stated above and implemented in ~30 lines you can
 read (`nidra/eval/longmemeval.py`), so compare definitions before comparing
-numbers. End-to-end QA accuracy needs model calls and is **not claimed** —
-the harness is public so the number can never precede the machine.
+numbers. End-to-end QA accuracy needs model calls and is **not claimed yet** —
+the harness is public so the number can never precede the machine. The QA
+stage is in the box and needs **no API key** — it runs through your own
+Claude Code login:
+
+```bash
+nidra eval-longmemeval --data longmemeval_s.json --qa   # requires `claude` login
+```
+
+It answers strictly from the retrieved memories, judges hypotheses against
+gold with abstention handled, batches items per call, and counts anything
+unparsed as wrong — a dead bridge produces missing answers, never invented
+ones.
 
 Receipts held at benchmark scale too: of 230,739 turns ingested across the
 run, 98.9% earned `machine_checked` grades against their materialized sources.
@@ -178,9 +189,13 @@ Five deterministic stages — zero tokens, zero API keys — plus one optional L
 3. **Contradict** — same subject, negated or numerically conflicting claims → both flagged `contested`.
 4. **Schedule** — spaced-repetition review: clean checks push the next review out (1→3→7→14→30→90 days); any failure resets the clock.
 5. **Prune** — evidence-free, low-confidence, long-overdue memories are **tombstoned, never deleted**: the journal keeps every byte, so forgetting stays auditable.
-6. **Judge** *(optional)* — contested pairs go to a pluggable LLM judge
-   (`nidra sleep --judge`, defaults to `claude-haiku-4-5`; fails open — an
-   unreachable judge leaves the pair flagged for a human, never guessed).
+6. **Judge** *(optional, and still no API key)* — contested pairs go to a
+   pluggable judge. The default bridge is **Claude Code itself**: if the
+   `claude` CLI is installed and logged in, `nidra sleep --judge` runs
+   judgment through it — zero keys, zero SDKs, billed to the Claude
+   subscription you already have. An Anthropic SDK judge remains as explicit
+   fallback for keyed servers. Every path fails open: an unreachable judge
+   leaves the pair flagged for a human, never guessed.
 
 Running the pass twice in an unchanged world produces **zero actions**.
 Consolidation is idempotent; the report is a diff you can trust.

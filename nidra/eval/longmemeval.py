@@ -169,3 +169,164 @@ def run(
         "pipeline_grades": dict(grades),
         "seconds": round(time.time() - t0, 1),
     }
+
+
+# ---- QA stage: answers + judging through Claude Code (no API key) ---------
+
+_TAG_LINE = None  # compiled lazily per tag
+
+
+def _pack_answer_prompt(items: List[Tuple[int, str, List[str]]]) -> str:
+    parts = [
+        "You answer questions strictly from the memory snippets provided with each item.",
+        "For each item output exactly one line, nothing else: 'A<n>: <short answer>'.",
+        "If the snippets do not contain the answer, output exactly 'A<n>: No information available'.",
+        "",
+    ]
+    for idx, question, contexts in items:
+        parts.append("### Item %d" % idx)
+        for c in contexts:
+            parts.append("- %s" % c)
+        parts.append("Question %d: %s" % (idx, question))
+        parts.append("")
+    return "\n".join(parts)
+
+
+def _pack_judge_prompt(items: List[Tuple[int, str, str, str]]) -> str:
+    parts = [
+        "Grade each hypothesis against its gold answer for the given question.",
+        "Paraphrase counts as correct. When the gold answer indicates the information",
+        "is unavailable or unknown, the hypothesis is correct only if it also declines.",
+        "For each item output exactly one line: 'J<n>: CORRECT' or 'J<n>: WRONG'.",
+        "",
+    ]
+    for idx, question, gold, hyp in items:
+        parts.append("### Item %d" % idx)
+        parts.append("Question: %s" % question)
+        parts.append("Gold: %s" % gold)
+        parts.append("Hypothesis: %s" % hyp)
+        parts.append("")
+    return "\n".join(parts)
+
+
+def _parse_tagged(text: str, tag: str) -> Dict[int, str]:
+    import re as _re
+
+    out: Dict[int, str] = {}
+    for m in _re.finditer(r"(?m)^\s*%s(\d+)\s*:\s*(.+?)\s*$" % tag, text or ""):
+        out[int(m.group(1))] = m.group(2)
+    return out
+
+
+def run_qa(
+    data_path: str,
+    workdir: str,
+    k: int = 5,
+    limit: Optional[int] = None,
+    model: Optional[str] = "haiku",
+    batch: int = 6,
+    workers: int = 4,
+    ask=None,
+) -> Dict[str, Any]:
+    """End-to-end QA accuracy: retrieve -> answer -> judge, via Claude Code."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    if ask is None:
+        from ..claude_cli import ask_claude as ask
+
+    questions = load_questions(data_path)
+    if limit:
+        questions = questions[:limit]
+    os.makedirs(workdir, exist_ok=True)
+    t0 = time.time()
+
+    rows: List[Dict[str, Any]] = []
+    for i, q in enumerate(questions):
+        store = ingest_question(q, workdir)
+        run_sleep(store)
+        top = retrieve(store.load(), q["question"], k=k)
+        rows.append(
+            {
+                "idx": i,
+                "q": q,
+                "contexts": [m["statement"][:400] for m in top],
+            }
+        )
+        shutil.rmtree(os.path.join(workdir, "q_" + q["question_id"]), ignore_errors=True)
+
+    def _chunks(seq: List[Any]) -> List[List[Any]]:
+        return [seq[i : i + batch] for i in range(0, len(seq), batch)]
+
+    hyps: Dict[int, str] = {}
+    unparsed = 0
+
+    def _answer(chunk: List[Dict[str, Any]]) -> Dict[int, str]:
+        prompt = _pack_answer_prompt(
+            [(r["idx"], r["q"]["question"], r["contexts"]) for r in chunk]
+        )
+        try:
+            return _parse_tagged(ask(prompt, model=model), "A")
+        except Exception:
+            return {}
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for parsed in pool.map(_answer, _chunks(rows)):
+            hyps.update(parsed)
+
+    verdicts: Dict[int, str] = {}
+
+    def _judge(chunk: List[Dict[str, Any]]) -> Dict[int, str]:
+        prompt = _pack_judge_prompt(
+            [
+                (
+                    r["idx"],
+                    r["q"]["question"],
+                    r["q"]["answer"],
+                    hyps.get(r["idx"], "No answer produced"),
+                )
+                for r in chunk
+            ]
+        )
+        try:
+            return _parse_tagged(ask(prompt, model=model), "J")
+        except Exception:
+            return {}
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for parsed in pool.map(_judge, _chunks(rows)):
+            verdicts.update(parsed)
+
+    per_type_hit: Dict[str, int] = defaultdict(int)
+    per_type_n: Dict[str, int] = defaultdict(int)
+    abs_hit = abs_n = 0
+    for r in rows:
+        idx, q = r["idx"], r["q"]
+        verdict = verdicts.get(idx)
+        if verdict is None or idx not in hyps:
+            unparsed += 1
+        correct = verdict is not None and verdict.strip().upper().startswith("CORRECT")
+        if q["question_id"].endswith("_abs"):
+            abs_n += 1
+            abs_hit += int(correct)
+        qtype = q["question_type"]
+        per_type_n[qtype] += 1
+        per_type_hit[qtype] += int(correct)
+
+    scored = sum(per_type_n.values())
+    hits = sum(per_type_hit.values())
+    return {
+        "dataset": os.path.basename(data_path),
+        "stage": "qa",
+        "bridge": "claude-code-cli",
+        "model": model,
+        "k": k,
+        "questions_scored": scored,
+        "accuracy": round(hits / scored, 4) if scored else None,
+        "per_type": {
+            t: {"n": per_type_n[t], "accuracy": round(per_type_hit[t] / per_type_n[t], 4)}
+            for t in sorted(per_type_n)
+        },
+        "abstention": {"n": abs_n, "accuracy": round(abs_hit / abs_n, 4) if abs_n else None},
+        "unparsed": unparsed,
+        "seconds": round(time.time() - t0, 1),
+    }
