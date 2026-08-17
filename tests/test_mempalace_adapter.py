@@ -135,3 +135,29 @@ def test_room_filter_and_limit(tmp_path):
     rooms = [d["room"] for d in iter_drawers(palace, room="decisions")]
     assert rooms == ["decisions", "decisions"]
     assert len(list(iter_drawers(palace, limit=1))) == 1
+
+
+def test_unicode_anchor_verifies_in_both_writer_styles(tmp_path):
+    """The Devanagari lesson: encoding must never masquerade as drift."""
+    import json
+    from nidra.grade import verify_evidence_row
+    from nidra.store import new_memory
+
+    dev = "गुरुजी ने कहा कि क्रिया योग का अभ्यास प्रतिदिन करना चाहिए"
+    anchor = clean_anchor(dev)
+    assert anchor is not None and not anchor.isascii()
+
+    raw_src = tmp_path / "raw.jsonl"
+    raw_src.write_text(json.dumps({"text": dev}, ensure_ascii=False), encoding="utf-8")
+    esc_src = tmp_path / "escaped.jsonl"
+    esc_src.write_text(json.dumps({"text": dev}, ensure_ascii=True), encoding="utf-8")
+
+    for src in (raw_src, esc_src):
+        mem = new_memory(dev, source=str(src), excerpt=anchor)
+        state, reason = verify_evidence_row(mem["evidence"][0])
+        assert state == "ok", (src.name, reason)
+
+    # and a genuinely changed source still reads as drift
+    esc_src.write_text(json.dumps({"text": "कुछ और ही लिखा है अब यहाँ"}, ensure_ascii=True))
+    mem = new_memory(dev, source=str(esc_src), excerpt=anchor)
+    assert verify_evidence_row(mem["evidence"][0])[0] == "drifted"

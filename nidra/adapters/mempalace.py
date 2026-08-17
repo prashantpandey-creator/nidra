@@ -44,25 +44,40 @@ _ANCHOR_RUN = re.compile(r"[ -!#-\[\]-~]+")
 # MemPalace decorates drawer text with quote/list prefixes that are NOT in the
 # source bytes; strip them per line before choosing an anchor.
 _RENDER_PREFIX = re.compile(r"^[>*#\s-]+")
+# For scripts with no long ASCII runs (Devanagari, Cyrillic ...): any run free
+# of JSON-special characters and line breaks is still a verifiable anchor.
+_UNICODE_BREAK = re.compile('["\\\\\\r\\n\\t\\u2028\\u2029]')
 
 
 def clean_anchor(text: str, min_len: int = ANCHOR_MIN, max_len: int = ANCHOR_MAX) -> Optional[str]:
     """Longest escaping-proof run of the text, else None.
 
     An anchor must fail re-verification only when the *source* changed — never
-    because of encoding. So anchors are pure printable ASCII (immune to
-    ensure_ascii variance) with rendering prefixes stripped (not source bytes).
+    because of encoding. Preference order (a lesson imported from a production
+    Sanskrit RAG whose keyword lane silently lost 85K Devanagari rows to an
+    ASCII-only assumption):
+
+    1. A pure printable-ASCII run — byte-identical under every JSONL writer.
+    2. A unicode run free of ``"``, ``\\`` and line breaks — verifiable in
+       raw-UTF-8 sources directly, and in ``ensure_ascii`` sources via the
+       escaped form (the grader checks both). Reach is only ever added.
     """
-    best = ""
+    best_ascii, best_unicode = "", ""
     for line in (text or "").splitlines():
         line = _RENDER_PREFIX.sub("", line)
         for run in _ANCHOR_RUN.findall(line):
             run = run.strip()
-            if len(run) > len(best):
-                best = run
-    if len(best) < min_len:
-        return None
-    return best[:max_len].strip()
+            if len(run) > len(best_ascii):
+                best_ascii = run
+        for run in _UNICODE_BREAK.split(line):
+            run = run.strip()
+            if len(run) > len(best_unicode):
+                best_unicode = run
+    if len(best_ascii) >= min_len:
+        return best_ascii[:max_len].strip()
+    if len(best_unicode) >= min_len:
+        return best_unicode[:max_len].strip()
+    return None
 
 
 def _connect(palace: str) -> sqlite3.Connection:

@@ -51,6 +51,14 @@ def verify_evidence_row(ev: Dict[str, Any]) -> Tuple[str, str]:
         return "source_missing", str(exc)
     if excerpt in content:
         return "ok", "excerpt present in source"
+    if not excerpt.isascii():
+        # ensure_ascii JSONL writers store non-ASCII as \uXXXX escapes; the
+        # escaped form is checked too so encoding never masquerades as drift.
+        import json as _json
+
+        escaped = _json.dumps(excerpt, ensure_ascii=True)[1:-1]
+        if escaped in content:
+            return "ok", "excerpt present in source (json-escaped form)"
     return "drifted", "excerpt no longer present in source"
 
 

@@ -269,6 +269,9 @@ problem; honesty is not.
 - **Full FSRS scheduling** (the v1 ladder is deliberately simple).
 - **Batch-API judge** for bulk arbitration at 50% pricing.
 
+Field notes on the production system these lessons came from:
+[docs/FIELD_NOTES_PURANGPT.md](docs/FIELD_NOTES_PURANGPT.md).
+
 ## Provenance
 
 Nidra generalizes a memory doctrine built and battle-tested inside a production
