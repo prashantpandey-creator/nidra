@@ -221,6 +221,41 @@ store.add(new_memory("The retry limit is 5", subject="retry-limit",
 print(render_markdown(run_sleep(store)))
 ```
 
+## The recall cache — a cache that can prove it's still valid
+
+The oldest hard problem in caching is invalidation. The oldest hard problem in
+AI memory is staleness. **They are the same problem**, and graded memory solves
+both at once:
+
+```python
+from nidra import Store
+from nidra.recall import remember, recall, prewarm
+
+store = Store(".nidra"); store.init()
+remember(store, "What is the retry limit?", "It is 5.",
+         sources=[("config.md", "retry limit is 5", "config.md#L12")])
+
+recall(store, "What's the retry limit?")     # → hit (fuzzy match, receipts verify)
+# ... config.md changes ...
+recall(store, "What's the retry limit?")     # → None. Invalidated by reality.
+```
+
+A cached answer carries the receipts it was built from and is **re-graded at
+serve time**: the moment any source drifts, the entry silently stops serving —
+no TTL guesswork, no stale confident answer surviving on a timer. The sleep
+pass re-checks the whole cache on schedule; conflicting cached answers to one
+question share a subject, so the contradiction stage catches them and recency
+prefers the newest. And `prewarm(...)` runs the *known question space* through
+any answerer (the Claude Code bridge included) ahead of demand — if you know
+what your users ask, answer it before they do, with receipts, and let the
+sleep pass keep the pre-cache honest.
+
+This pattern was proven in production before it was named: the RAG system in
+our [field notes](docs/FIELD_NOTES_PURANGPT.md) carries per-user memory across
+conversations, mined the finite grammar of what seekers actually ask, and
+pre-enriches by measured demand. Nidra adds the missing law: **serve only what
+still verifies.**
+
 ## Token economics
 
 Nidra is deterministic-first by design: the entire pass costs nothing until a
