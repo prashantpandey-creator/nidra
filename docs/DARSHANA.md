@@ -82,6 +82,127 @@ of the seeker. The correspondence is at the level of *how citta works*, not
 6. **Nirodha-pariṇāma** (YS 3.9): the consolidation pass's own action history
    is itself trainable state — mine the sleep journal for gate-tuning.
 
+---
+
+# Part II — The wider canon (verified 2026-08-18, same method)
+
+Sweep of the remaining doctrine-bearing corpus: Vaiśeṣika, Nyāya, Mīmāṃsā,
+Yoga Vāsiṣṭha, Brahma Sūtras, Taittirīya, Kaṭha, Haṭha corpus, and Guruji's
+books (Gorakh Bodh commentary). Three genuinely new axes emerged.
+
+## Vaiśeṣika — the mechanics of recall, formalized
+
+| Sutra | Doctrine | Reading |
+|---|---|---|
+| **KVs 9.2.6** (`vaisheshika-0-135`) | "smṛti [arises] from a particular conjunction of the self AND from saṃskāra" (ātmanaḥ saṃyogaviśeṣāt saṃskārāc ca) | The formal **two-factor recall equation**: retrieval = cue-conjunction × stored trace. Neither alone suffices. The oldest statement of cue-dependent memory. |
+| **KVs 9.2.7** | "Likewise dream" (tathā svapnaḥ) | Dreams = replay from saṃskāra. Sleep-replay named in one word. |
+| **KVs 9.2.10–12** (`vaisheshika-0-136/137`) | Invalid knowledge arises from sense-defect **and from saṃskāra-defect** (saṃskāra-doṣa); "the defective is false knowledge; the non-defective is knowledge" (duṣṭa/aduṣṭa) | **Corrupted memory as a first-class error source**, distinct from bad perception — and a binary trust split on the trace itself. Nidra's drift demotion is saṃskāra-doṣa detection; the duṣṭa/aduṣṭa split is grading. |
+
+## Nyāya & Mīmāṃsā — the trust-default debate
+
+- **NS 4.2.34–35** (`nyayasutras-0-345/346`): dream-cognition operates "like
+  memory and imagination"; false apprehension is destroyed by true knowledge
+  **upon waking** (pratibodhe). Error correction happens at the sleep/wake
+  boundary — demotion at the pass, not in the hot path.
+- **Mīmāṃsā vs Nyāya on validity** (file `mimamsa_sutras.jsonl`, 304
+  pramāṇa-discussion hits; the specific doctrine is commentarial — *partially
+  grounded, flag before citing in print*): Mīmāṃsā's **svataḥ-prāmāṇya** —
+  cognitions are valid by default until defeated; Nyāya's **parataḥ-prāmāṇya**
+  — validity must be established extrinsically. This is the fail-open vs
+  fail-closed debate of memory systems, held ~1,500 years ago. Nidra's grade
+  ladder (up from `unverified`) is the Nyāya position; the recall cache's
+  serve-until-drift is Mīmāṃsā with defeaters. The hybrid is now a *position in
+  a classical debate*, not an ad-hoc choice.
+
+## Yoga Vāsiṣṭha — the vāsanā text (790 hits)
+
+- **`yoga_vasistha-0-45`**: "vāsanā dvividhā proktā śuddhā ca malinā tathā /
+  malinā janmano hetuḥ śuddhā janmavināśinī" — impressions are twofold:
+  **pure (liberating) and impure (binding)**. A quality axis **orthogonal to
+  truth**: a memory can be perfectly true and still malinā — binding noise that
+  perpetuates the loop. Nidra grades *evidence*; YV demands a second grade for
+  *effect*. → Mining item 7.
+- **`yoga_vasistha-0-43`**: "when vāsanā wanes, the mind dissolves swiftly —
+  like a snowflake when cold ends." The mind IS its impressions; decay is
+  architectural, not incidental.
+- **`yoga_vasistha-0-42`**: "abandonment of vāsanā is called the highest
+  liberation" — forgetting as the crown discipline, not a storage compromise.
+
+## Vedānta & Upaniṣads
+
+- **BS 1.1.9 svāpyayāt** (`brahmasutras-0-7`): jīvas *merge into Brahman* in
+  deep sleep — Vedānta's systematization of Māṇḍūkya 5. Part I's consolidation
+  grounding now stands in two canons.
+- **Taittirīya pañcakośa** (`taittiriya-0-37`): nested selves — annamaya
+  (body) → prāṇamaya (breath) → manomaya (mind) → vijñānamaya (discernment) →
+  ānandamaya. A layered architecture where each inner sheath fills the outer:
+  hardware → runtime → memory → judgment → the voice. Hold loosely; the
+  correspondence is structural, not term-for-term.
+- **Kaṭha 1.3.3–4, the chariot** (`katha-0-20`): ātmā the rider, body the
+  chariot, **buddhi the charioteer, manas the reins, senses the horses**. The
+  fleet ruling as a 2,500-year-old diagram: puruṣa (the seeker) rides and never
+  drives a component; buddhi = the one large decider; manas = orchestration;
+  indriyas = the small vessels. One rider, one driver, many horses.
+
+## Haṭha corpus — the substrate lever
+
+- **HYP 2.2** (`hatha_yoga_pradipika-0-13`): "cale vāte calaṃ cittaṃ, niścale
+  niścalam" — as prāṇa moves, mind moves; still the breath, still the mind.
+  **Mind-stability is substrate-stability**: haṭha regulates citta *through*
+  its carrier, never head-on. Engineering read: cognitive quality is governed
+  at the infra layer (the 07-18 co-tenancy outage was a vāyu disturbance — the
+  citta fell because the breath did).
+- **Gorakṣa Śataka 20** (`goraksha_shataka-0-22`): prāṇa in suṣumnā → mind
+  dissolves into nāda → "the supportless mind (nirālambā manas) — that is
+  samādhi." Laya as the terminal state of consolidation.
+- **Gheraṇḍa's dhauti/ṣaṭkarma** (`gheranda_samhita-0-18`): purify the pot
+  (ghaṭa) before prāṇāyāma — **data-cleaning as a named limb**, prerequisite to
+  practice. The corpus repairs (source_reality_check, quarantine, KrutiDev
+  decode) are the system's dhauti.
+
+## Gorakh Bodh — via Guruji's own books (sharma_texts, 17 hits)
+
+- **`sharma_texts` chunk `3ee6c8ecc…` (Sharma foreword)**: the Nāths' twilight
+  language — **sandhyā-bhāṣā** — "allegoric narration forms a 'double bottom',
+  a layer of secret knowledge in seemingly plain content." **This is the
+  doctrinal name for the decode-lens architecture** (surface text + Inner
+  meanings + the 613 decode keys). The decode layer is not an invention grafted
+  onto the tradition; the tradition names the encoding.
+- **chunk `f537a79…`**: Gorakh Bodh "states what can be done and achieved
+  **because it had been done**" — validity by accomplishment. The witness
+  principle (only the witnessed trains) in the lineage's own voice.
+
+## Corpus gaps — the completeness finding
+
+Two of the most memory-relevant texts in all of śruti are **absent from
+`data/chunks/`**:
+
+1. **Bṛhadāraṇyaka Upaniṣad** — BU 4.3 is the most detailed sleep/dream
+   analysis in the canon (the puruṣa moving between states, "taking apart and
+   building" from impressions).
+2. **Chāndogya Upaniṣad** — ChU 7.13 is the canon's direct praise of memory
+   (smara as a named rung on Nārada's ladder: without memory, no cognition
+   functions); ChU 6 is the sat-vidyā.
+
+For a claim of complete Puranic-canon grounding, ingest both. (Kauṣītaki
+returned 0 hits on sleep terms — likely coverage or script; verify before
+citing it.)
+
+## Mining list — Part II additions
+
+7. **Effect-grade beside evidence-grade** (YV's śuddhā/malinā): a second axis —
+   does this memory *serve or bind*? The viveka usage ledger supplies it: what
+   retrieves-and-serves is śuddhā; what hoards weight unserving is malinā and
+   decays faster. True-but-binding is a real class.
+8. **Saṃskāra-doṣa as a named error channel** (KVs 9.2.10): report memory-born
+   errors separately from retrieval-born errors in evals.
+9. **Recall = cue × trace** (KVs 9.2.6): benchmark retrieval on *both* factors
+   — cue quality and trace strength — not conflated.
+10. **The trust-default position** (svataḥ vs parataḥ): document Nidra's grade
+    ladder as Nyāya-position, recall-cache as Mīmāṃsā-with-defeaters. One
+    paragraph in the paper; centuries of debate behind it.
+11. **Sandhyā-bhāṣā** as the formal name of the two-layer decode architecture.
+
 *Method note: every citation above was pulled from the corpus by direct search
 on 2026-08-18, not from memory of the texts. Verify chunk ids against
 `data/chunks/` before republishing — chunk boundaries can shift on re-ingestion.*
