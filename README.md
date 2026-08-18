@@ -31,6 +31,13 @@ pip install git+https://github.com/prashantpandey-creator/nidra
 nidra demo --strict
 ```
 
+Or, for people who don't live in a terminal: `packaging/build_zip.sh` produces a
+32 KB **`nidra-<version>.zip`** with `install.sh` / `install.cmd` inside. Unzip,
+double-click the installer, open a new terminal, run `nidra demo`. No pip, no
+git, no package manager, no admin password, no API key — Python 3.9+ is the only
+prerequisite, and `packaging/USER-GUIDE.md` is written for someone who has never
+heard of any of this.
+
 The demo plants a store with **known defects** — duplicates, contradictions,
 stale junk, and a verified memory whose source file then changes — runs two
 sleep passes, and verifies every defect was caught:
