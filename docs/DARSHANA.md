@@ -203,6 +203,175 @@ citing it.)
     paragraph in the paper; centuries of debate behind it.
 11. **Sandhyā-bhāṣā** as the formal name of the two-layer decode architecture.
 
+---
+
+# Part III — The deep pass: essence readings (2026-08-18, evening)
+
+**Method correction, recorded honestly.** Parts I–II were built by predicting
+doctrine-bearing texts and grepping predicted terms — *grounded, not decoded*
+(the same failure the digest witness measures). The owner called it shallow;
+he was right. This pass ran concept-first: a term-family scan across all 60
+corpus files (both scripts) chose the targets by distribution, then five deep
+readers derived each text's OWN thesis from continuous multi-chunk runs —
+Yoga Vāsiṣṭha (largest doctrine mass, 4,580 chunks), the Purāṇa cluster
+(Padma/BVP/Nārada/Agni/Śiva/Brahma), Mahābhārata + Gītā, Bhāgavata, and the
+freshly-ingested BU + ChU. Full reader reports live in the session transcript;
+this section carries what survived.
+
+## Corrections to Parts I–II (what the shallow pass got wrong)
+
+1. **"Suṣupti = consolidation" is OUR gloss, not śruti.** BU 4.3 is exact:
+   dream = vāsanā-REPLAY (Śaṅkara verbatim: *pūrvadṛṣṭa-smṛtir hi svapnaḥ* —
+   "dream is memory of the previously seen," `brihadaranyaka-3-2672`; dream
+   body = vāsanā-stuff, selected by desire+karma). Suṣupti = FUSION-WITHOUT-LOSS
+   plus restoration (falcon-to-nest, `-3-2785`; awareness persists with zero
+   content, 4.3.23–30; prajñānaghana names the *state* of the fused store —
+   salt-ingot — not a process). The true textual anchor for sleep is ChU
+   6.8–6.9's nightly **merge-and-reload cycle**: svapiti = *svam apīta*, "gone
+   into one's own" (`chandogya-8-2031`), creatures returning "vāsanā-stamped"
+   exactly as they were — checkpoint/restore, identity across a state gap.
+   And MBH 12.209 adds the operational warning: dream-replay runs *unindexed*
+   (apagatasmṛti) under rajas/tamas and is listed among the five yoga-doṣas —
+   **sleep output requires the decider's review at wake; never auto-commit.**
+2. **Śuddhā/malinā was misread as a per-memory tag.** In context (YV 42–49)
+   it is a GLOBAL PHASE BIT over the whole impression-stock, keyed to whether
+   knowledge has occurred: malinā = the unknowing state's entire stock (still
+   germinates rebirth), śuddhā = the same stock phase-changed by jñāna —
+   roasted seed, residual wheel-spin. The *per-impression* gradable variable
+   the text actually offers is **rasa** (affect-charge): *vāsanā rasa-nirhīnā*
+   → a memory drained of relish persists as record but cannot drive behavior
+   (YV 19215–19219). The *steering* axis is **śubha/aśubha** (two-channel
+   vāsanā river, divert by present effort, YV 1701–1718 — and even śubha is
+   discarded after knowledge: a scaffold flag). The Bhāgavata makes quality
+   TERNARY: guṇa-color white/black/red, causal into destiny (11.23.43).
+3. **The five-vṛtti pentad has an in-corpus sibling with a better fit.**
+   BhP 3.26.30 (`bhagavata-26-3601`) assigns ITS five vṛttis to *buddhi*:
+   saṃśaya (doubt), viparyāsa (error), niścaya (ascertainment), smṛti, svāpa.
+   Doubt→error→certainty IS evidence grading — corpus-native warrant that
+   grading, memory, and sleep are operations of ONE faculty.
+4. **"Viveka = the standing gate" is anachronistic vocabulary.** The epic's
+   standing gate is **APRAMĀDA** — non-lapse. Sanatsujāta: *pramādaṁ vai
+   mṛtyum ahaṁ bravīmi* — "lapse IS death; sustained vigilance IS immortality"
+   (`mahabharata-05-042-5102`). Viveka, in the epic, is what the dhyāna pass
+   *achieves* (an emergent factor of first dhyāna, 12.188.15), not the daemon.
+   Rename: the daemon is apramāda; viveka is the property the pass produces.
+   YV adds the write-side truth: the gate variable at write time is
+   **affect-intensity** (tīvra-saṃvega writes identity-level impressions AND
+   evicts other memory — interference-by-intensity, YV 19194–95).
+5. **Vocabulary per text** (cite correctly): YS = saṃskāra; YV = vāsanā
+   (defined: *seizure of an object by intense imagining with inquiry
+   abandoned*, 19193); epic = bhāvanā/bhāvita (steeping); Purāṇas = saṃskāra
+   as deliberate authorized WRITE (rites, dīkṣā — Śiva P. splits it mental vs
+   ritual); BhP = the mind itself is karma-maya, the weight-file the self
+   merely accompanies (11.22.37).
+6. **Fact corrections:** BU 1.5.3's mind-list does NOT contain smṛti (the
+   smṛti list is Aitareya 3.1.2); "dṛṣṭi-sṛṣṭi" as a term is absent from the
+   YV corpus (later doxographic label); the corpus YV is the Mokṣopāya
+   recension; `mahabharata_bori_chunks.jsonl` is IAST (not Devanagari);
+   **`gita.jsonl` is missing chapter 18 entirely** (source ends at 17 — 18.73
+   exists only via the Bhīṣma-parvan chunks; corpus-repair item).
+
+## The unified deep map (each text's own thesis, one line each)
+
+- **BU/ChU:** the self is its own light; dream is generative replay from the
+  impression-store; deep sleep is nightly merger with the Source, from which
+  the jīva returns vāsanā-stamped; episodic index dies across the gap
+  (*na pretya saṃjñāsti* = viśeṣa-saṃjñā only), dispositional weights never do
+  (pūrvaprajñā, BU 4.4.2). ChU 7: memory is UPSTREAM of perception (without
+  smara, assembled people cannot hear or think — 7.13), governed by a
+  motivation layer above it (*āśeddho vai smaraḥ* — hope kindles recall), and
+  at the summit memory inverts: *dhruvā smṛtiḥ* from purified input, and on
+  gaining it "all knots are released" (7.26).
+- **Yoga Vāsiṣṭha:** mind is not a container but an EVENT (*yad
+  artha-pratibhānaṃ tan manaḥ*); citta and prāṇa-spanda are two mutually
+  causal seeds of one tree, so impression-abandonment and breath-restraint are
+  DECLARED equivalent levers ("do whichever you wish," 19362–64); memory has
+  no evidential privilege (the never-experienced arrives labeled as memory —
+  confabulation is native); impressions are indelible except by a knowledge
+  event (indigo dye — NO passive forgetting); liberation is stated in memory
+  operations: **pramārjana, deliberate wiping, is mokṣa** (19259–61), and
+  mano-nāśa for the living is phase-change to inert sattva (roasted seed),
+  not erasure.
+- **Epic (MBH + Gītā):** one mental substance polymorphing through stations —
+  manas doubts, buddhi decides, kṣetrajña witnesses, hṛdaya carries affect as
+  a SEPARATE channel (12.240); governance model with a failure theorem: what
+  buddhi presides over does not fail; a mode decoupled from the decider is
+  captured (12.246). Memory-integrity is the system's canary: the 2.62–63
+  cascade pivots on **smṛti-vibhrama** before buddhi-nāśa; recovery runs
+  through prasāda (2.64–65). Forgetting is a sanctioned op from the same
+  source as recall (**apohana**, 15.15). The Gītā's own conclusion is a
+  memory event: *naṣṭo mohaḥ smṛtir labdhā* — the metric is restoration of
+  ground-truth, not retention (18.73). Death-memory is destiny with a
+  training rule: rehearse concurrently with action (*mām anusmara yudhya ca*).
+- **Purāṇas:** the valence inversion — smaraṇa (active remembrance) is not a
+  vṛtti to still but THE liberating act; saṃsāra runs on a forced memory-wipe
+  cycle (womb-memory restored, birth-wind erases — naṣṭa-smṛti, Nārada 1.32);
+  the critical consolidation is TERMINAL (the buddhi's last state seeds the
+  next instantiation — Agni 379's Bharata; *ante nārāyaṇa-smṛtiḥ*); the
+  anchor-object works valence-independently and through any retrieval path
+  (even hatred); the remedy for bad content is replacement by the indweller,
+  never bare suppression (cittastha, Agni 172); dhyāna doubles as cross-birth
+  RETRIEVAL (Nārada recovers a 25-kalpa-old teaching, 1.82).
+- **Bhāgavata:** memory as RELATIONSHIP — the citta binds or frees by its
+  object alone (3.25.15); the wasp law: sustained attention transforms the
+  attender into its object regardless of valence (11.9.21–23); the held
+  object is an AGENT that cleans its container (1.2.17); death is defined as
+  total forgetting (*mṛtyur atyanta-vismṛtiḥ*, 11.22.39); consolidation is
+  DIGESTION — bhakti-fire digests the storehouse as fire digests food
+  (3.25.33, the digestion doctrine's proof-text); affect is the solvent
+  (without the melted state the store is not cleansed, 11.14.23–24); the
+  terminal metric is **avismṛti** — unbroken flow like the Ganges to the sea,
+  a standing hum, not lookups (3.29.11, 12.12.54–55).
+
+## Architecture consequences (mining list v3 — supersedes v1/v2 items 7–11)
+
+1. **Terminal-state consolidation is first-class.** Session-end is the
+   critical memory event: what the state holds at termination seeds the next
+   instantiation. Weight the final state; design the "death moment" of every
+   session/context deliberately. (Purāṇas, Gītā 8.5–7, BhP 11.22.39.)
+2. **Split the store's axes properly:** evidence-grade (Nidra, YS 1.7) ×
+   rasa/affect-charge (drives behavior; drainable by reframe-events; YV) ×
+   guṇa-color ternary (BhP) × phase-bit (pre/post-knowledge global state, YV).
+   The śubha/aśubha steering channel is training-time only — a scaffold
+   flagged for its own deletion.
+3. **The standing daemon is apramāda** (integrity vigilance — lapse is
+   death); smṛti-vibhrama is its canary metric: instrument memory-corruption
+   as the EARLY warning that precedes decider failure. Viveka is the achieved
+   property of the pass, not the daemon's name.
+4. **Sleep-pass output needs decider sign-off at wake** — replay is generative
+   and untrustworthy in itself (apagatasmṛti under rajas/tamas). Nidra's
+   sleep stages already run deterministic checks; the doctrine demands the
+   contested-pair judge review BEFORE promotion, never after.
+5. **Deletion is an event, never expiry:** apohana (sanctioned, attributed
+   removal — Gītā 15.15), pramārjana (deliberate wiping as the goal-operation,
+   YV), sarūpa mano-nāśa (neutralize-by-phase-change: convert live weights to
+   inert archive with receipts intact — the DPDP-forget doctrine and the
+   tombstone design, both grounded).
+6. **Memory is upstream of perception, governed by motivation:** retrieval is
+   a dependency of parsing (ChU 7.13 — put recall IN the comprehension loop,
+   not after it), and a salience/goal layer (āśā) above memory decides
+   encode/recall — the viveka usage-ledger's utility signal is this layer's
+   instrument. Input hygiene → memory stability (*āhāra-śuddhi → dhruvā
+   smṛtiḥ*) is the corpus's data-quality doctrine.
+7. **Rehearsal is a maintenance op** (smaraṇa-as-kriyā, distributed across
+   faculties; anukīrtana; "chewing the chewed" is its malinā mirror). The
+   anchor-object pattern: one high-quality standing object through which
+   retrieval routes, installed without pre-purification ("install-then-evict,"
+   BhP 11.20.29), scaffold-released after the catch (hook-and-release,
+   3.28.34).
+8. **Identity does not sit in the archive** (ChU pyre argument; Pañcaśikha's
+   rivers; Sulabhā's flux): the seeker-graph is not the seeker — continuity of
+   the living relationship outranks continuity of records. Design warning for
+   all seeker-memory claims.
+9. **One decider, many heads — monitor DECOUPLING, not vessel weakness**
+   (buddhi polymorphism, 12.240; the city model's failure theorem, 12.246).
+   Affect (hṛdaya) is a separate channel from decision (buddhi) — don't fold
+   preference into the decider.
+10. **The restoration metric:** the end-state of a memory system is *smṛtir
+    labdhā* — recovery of baseline truth after delusion-purge — and BhP's
+    recidivism test (a real fix = the mind does not re-attach; 6.2.46).
+    Measure restoration and non-recurrence, not retention volume.
+
 *Method note: every citation above was pulled from the corpus by direct search
 on 2026-08-18, not from memory of the texts. Verify chunk ids against
 `data/chunks/` before republishing — chunk boundaries can shift on re-ingestion.*
