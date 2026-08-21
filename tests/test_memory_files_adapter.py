@@ -211,6 +211,31 @@ class TestRealMemoryFiles(unittest.TestCase):
         self.assertGreater(count, 200)
         self.assertEqual(len(errors), 0, f"Parse errors: {errors}")
 
+    @unittest.skipUnless(
+        os.path.isdir(os.path.expanduser("~/claude-sync/memory/-Users-badenath-projects-vedic-puran")),
+        "real memory dir not present"
+    )
+    def test_cap_drops_nothing_in_the_real_corpus(self):
+        """The docs promise EVERY path and wikilink is verified.
+
+        MAX_CLAIMS was 5, which silently dropped 129 claims across 41 real
+        files while the README still said "every". If a future file exceeds
+        MAX_CLAIMS, this fails loudly instead of quietly under-grading.
+        """
+        from nidra.adapters.memory_files import (
+            MAX_CLAIMS, _extract_paths, _extract_wikilinks, _parse_frontmatter,
+        )
+        dropped = []
+        for fname in os.listdir(self.REAL_DIR):
+            if not fname.endswith(".md") or fname == "MEMORY.md":
+                continue
+            with open(os.path.join(self.REAL_DIR, fname), encoding="utf-8") as fh:
+                _, body = _parse_frontmatter(fh.read())
+            np, nw = len(_extract_paths(body)), len(_extract_wikilinks(body))
+            if np > MAX_CLAIMS or nw > MAX_CLAIMS:
+                dropped.append(f"{fname}: {np} paths, {nw} wikilinks > cap {MAX_CLAIMS}")
+        self.assertEqual(dropped, [], "cap is silently dropping real claims: %s" % dropped)
+
 
 if __name__ == "__main__":
     unittest.main()

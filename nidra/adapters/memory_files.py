@@ -35,6 +35,13 @@ STATEMENT_CAP = 600
 ANCHOR_MIN = 20
 ANCHOR_MAX = 200
 
+# Max path- and wikilink-claims graded per memory file. This was 5, which
+# silently dropped 129 real claims across 41 of 272 files (15%) while the
+# docs promised "every file path, every wikilink is verified". Measured
+# worst case in the real corpus: 8 paths, 26 wikilinks — 40 leaves headroom
+# and still bounds a pathological file.
+MAX_CLAIMS = 40
+
 
 def _parse_frontmatter(text: str) -> Tuple[Dict[str, str], str]:
     if not text.startswith("---"):
@@ -132,7 +139,7 @@ def file_to_memory(
     stats = {"paths": 0, "wikilinks": 0, "content": 0}
 
     paths = _extract_paths(body)
-    for path, line in paths[:5]:
+    for path, line in paths[:MAX_CLAIMS]:
         mem["evidence"].append({
             "source": filepath,
             "excerpt": line[:ANCHOR_MAX],
@@ -143,7 +150,7 @@ def file_to_memory(
         stats["paths"] += 1
 
     wikilinks = _extract_wikilinks(body)
-    for target, line in wikilinks[:5]:
+    for target, line in wikilinks[:MAX_CLAIMS]:
         target_path = os.path.join(memory_dir, target + ".md")
         mem["evidence"].append({
             "source": target_path,
