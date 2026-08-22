@@ -97,7 +97,16 @@ def import_sessions(
             if not session.get("counts", {}).get("user", 0):
                 continue
 
-        if mem["id"] in existing or mem["id"] in fresh:
+        prior = existing.get(mem["id"]) or fresh.get(mem["id"])
+        if prior is not None:
+            # The statement is DERIVED from the session map, so re-derive it.
+            # Dedupe-and-skip meant that when the title parser was fixed, 90
+            # of 111 stored session memories kept saying "(untitled) on
+            # unknown" forever — the store could not learn.
+            prior["statement"] = mem["statement"]
+            prior["tags"] = mem["tags"]
+            if mem.get("evidence") and not prior.get("evidence"):
+                prior["evidence"] = mem["evidence"]
             summary["already_exists"] += 1
             continue
 

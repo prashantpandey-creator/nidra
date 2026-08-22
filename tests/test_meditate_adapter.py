@@ -131,6 +131,28 @@ def test_empty_transcripts_are_not_imported():
         assert [m["subject"] for m in store.load()] == ["session:" + FIXTURE["session_id"]]
 
 
+def test_statement_refreshes_when_the_session_map_improves():
+    """A session memory's statement is DERIVED — re-derive it.
+
+    Import deduped by id and never touched the existing row, so when the
+    title parser was fixed, 90 of 111 stored session memories kept saying
+    "Session '(untitled)' on unknown" forever. Re-import must refresh what
+    it derives, while still reporting the memory as already-existing.
+    """
+    with tempfile.TemporaryDirectory() as d:
+        store = Store(d); store.init()
+        before = dict(FIXTURE, title=None)
+        import_sessions(store, [before])
+        assert "(untitled)" in store.load()[0]["statement"]
+
+        after = dict(FIXTURE, title="Fix the retry loop")
+        r = import_sessions(store, [after])
+        assert r["imported"] == 0 and r["already_exists"] == 1, r
+        mems = store.load()
+        assert len(mems) == 1, "refresh must not duplicate the memory"
+        assert "Fix the retry loop" in mems[0]["statement"], mems[0]["statement"]
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     failed = 0
