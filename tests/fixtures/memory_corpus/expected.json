@@ -1,0 +1,78 @@
+{
+  "01-plain-real-paths.md": {
+    "paths": [
+      "/Users/dev/projects/app/net/client.py",
+      "/Users/dev/projects/app/tests/test_client.py",
+      "~/etc/app/settings.toml"
+    ],
+    "wikilinks": [
+      "retry-policy",
+      "client-timeouts"
+    ]
+  },
+  "02-templates.md": {
+    "paths": [],
+    "wikilinks": []
+  },
+  "03-globs-and-braces.md": {
+    "paths": [],
+    "wikilinks": []
+  },
+  "04-date-placeholders.md": {
+    "paths": [],
+    "wikilinks": []
+  },
+  "05-line-references.md": {
+    "paths": [
+      "/Users/dev/projects/app/parse.py",
+      "~/projects/app/util/guard.py"
+    ],
+    "wikilinks": []
+  },
+  "06-absence-statements.md": {
+    "paths": [],
+    "wikilinks": []
+  },
+  "07-paths-with-spaces.md": {
+    "paths": [
+      "~/Documents/side projects/marketplace",
+      "/Users/dev/Application Support/tool/build.sh",
+      "/Users/dev/plain/path.py"
+    ],
+    "wikilinks": []
+  },
+  "08-wikilink-shapes.md": {
+    "paths": [],
+    "wikilinks": [
+      "retry-policy",
+      "client-timeouts",
+      "deploy-runbook"
+    ]
+  },
+  "09-quoted-syntax.md": {
+    "paths": [],
+    "wikilinks": [
+      "index-format"
+    ]
+  },
+  "10-mixed-realistic.md": {
+    "paths": [
+      "/Users/dev/projects/app/import.py",
+      "~/Application Support/app/store.db",
+      "/Users/dev/projects/app/import.py"
+    ],
+    "wikilinks": [
+      "import-pipeline",
+      "store-schema"
+    ]
+  },
+  "11-commands-not-paths.md": {
+    "paths": [
+      "~/tools/preflight.sh",
+      "/Users/dev/bin/build.sh",
+      "~/tools/status.sh",
+      "~/tools/list.txt"
+    ],
+    "wikilinks": []
+  }
+}

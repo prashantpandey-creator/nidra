@@ -76,6 +76,12 @@ _ABSENCE_PHRASES = (
     "was removed", "were removed", "no longer exists", "does not exist",
     "doesn't exist", "not installed", "decommissioned", "is dead",
     "was retired", "never existed", "don't recreate", "do not recreate",
+    # "since removed" / "since deleted" is the natural phrasing a person
+    # reaches for when repairing a memory in place — and the phrasing this
+    # tool's own repair prompt recommends. Missing it meant a memory that had
+    # just been correctly repaired would drift again on the next pass.
+    # Caught by the fixture corpus, not by a user's token bill.
+    "since removed", "since deleted", "since retired", "since gone",
 )
 
 
@@ -99,6 +105,21 @@ def _states_absence(line: str) -> bool:
     return any(ph in low for ph in _ABSENCE_PHRASES)
 
 
+def _path_head(span: str) -> str:
+    """The path part of a backticked span, dropping any command tail.
+
+    `~/t/run.sh --human` -> `~/t/run.sh`. A path may contain spaces (that is
+    why the backtick pass exists at all), so we keep consuming words until a
+    word that cannot be part of a filename: a flag, or a shell operator.
+    """
+    words, out = span.split(), []
+    for w in words:
+        if w.startswith("-") or w in ("|", "&&", "||", ";", ">", ">>", "<"):
+            break
+        out.append(w)
+    return _clean(" ".join(out) or span)
+
+
 def _clean(p: str) -> str:
     p = p.strip().rstrip(".:`)>")
     # a trailing :NN is a line reference — the FILE is the claim
@@ -119,7 +140,18 @@ def _extract_paths(text: str) -> List[Tuple[str, str]]:
         for m in re.finditer(r"`([^`]+)`", line):
             inner = _clean(m.group(1))
             if inner.startswith("/Users/") or inner.startswith("~/"):
-                found.append(inner)
+                # A backticked span may be a COMMAND, not just a path. Spaces
+                # are allowed inside a path; flags and shell operators are not.
+                # Without this, `preflight.sh --human` was claimed verbatim and
+                # reported as missing — the script was right there.
+                found.append(_path_head(inner))
+                spans.append((m.start(), m.end()))
+            else:
+                # A path can also appear as an ARGUMENT inside a command span
+                # (`cat ~/tools/list.txt | head`). Claim the path, not the line.
+                for tok in inner.split():
+                    if tok.startswith("/Users/") or tok.startswith("~/"):
+                        found.append(_clean(tok))
                 spans.append((m.start(), m.end()))
         for pat in (r"(?<!\w)(/Users/[^\s\)\]\>\,\;\"'`]+)",
                     r"(?<!\w)(~/[^\s\)\]\>\,\;\"'`]+)"):
