@@ -38,6 +38,18 @@ def verify_evidence_row(ev: Dict[str, Any]) -> Tuple[str, str]:
     excerpt = ev.get("excerpt") or ""
     if sha256_text(excerpt) != ev.get("sha256"):
         return "corrupt", "stored excerpt no longer matches its own sha256"
+    # A path:/wikilink: claim is ABOUT a target's existence, not just about a
+    # line being present in the .md. Checking only the excerpt let a claim
+    # stay "machine_checked" after its target file was deleted — the dashboard's
+    # "still true" was false for the most common claim type. Check the target.
+    locator = str(ev.get("locator") or "")
+    if locator.startswith("path:"):
+        target = os.path.expanduser(locator[5:])
+        if not os.path.exists(target):
+            return "drifted", "path claim's target no longer exists: %s" % target
+    elif locator.startswith("wikilink:") and ev.get("source"):
+        if not os.path.exists(ev["source"]):
+            return "drifted", "wikilink target memory no longer exists"
     source = ev.get("source")
     if not source:
         return "source_missing", "no source recorded"
