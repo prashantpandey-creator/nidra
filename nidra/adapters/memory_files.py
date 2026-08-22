@@ -59,18 +59,79 @@ def _parse_frontmatter(text: str) -> Tuple[Dict[str, str], str]:
     return fm, body
 
 
+# A path is only a CHECKABLE CLAIM if it names one real location. Templates,
+# globs and elided displays are illustrations — asserting they exist and then
+# reporting them as drift is the instrument lying, not the world changing.
+# Measured on the real corpus: 11 of 25 repair-queue items were this.
+_NOT_A_CLAIM = ("<", ">", "{", "}", "*", "?", "\u2026", "...", "$", "%s")
+_PLACEHOLDER_WORDS = ("YYYYMMDD", "YYYY-MM-DD", "HHMMSS", "<id", "<ver")
+
+# A memory that RECORDS a deletion ("the plan file X is gone") states a fact
+# about absence. Grading it as "X should exist" marks the memory drifted for
+# being correct — the exact inversion of the tool's purpose. Measured: 2 of
+# the 24 remaining queue items. These are existence claims only; a line like
+# "removed the retry from foo.py" keeps its claim (the test pins both ways).
+_ABSENCE_PHRASES = (
+    "is gone", "are gone", "now gone", "was deleted", "were deleted",
+    "was removed", "were removed", "no longer exists", "does not exist",
+    "doesn't exist", "not installed", "decommissioned", "is dead",
+    "was retired", "never existed", "don't recreate", "do not recreate",
+)
+
+
+def _is_derived(locator: str) -> bool:
+    """True for evidence this adapter generates from the .md file itself."""
+    return (locator.startswith("path:") or locator.startswith("wikilink:")
+            or locator == "content_anchor")
+
+
+def _is_checkable(p: str) -> bool:
+    """False for anything that is an illustration rather than a location."""
+    if any(t in p for t in _NOT_A_CLAIM):
+        return False
+    if any(w in p for w in _PLACEHOLDER_WORDS):
+        return False
+    return True
+
+
+def _states_absence(line: str) -> bool:
+    low = line.lower()
+    return any(ph in low for ph in _ABSENCE_PHRASES)
+
+
+def _clean(p: str) -> str:
+    p = p.strip().rstrip(".:`)>")
+    # a trailing :NN is a line reference — the FILE is the claim
+    return re.sub(r":\d+$", "", p)
+
+
 def _extract_paths(text: str) -> List[Tuple[str, str]]:
-    """Extract (path, containing_line) pairs from text."""
+    """Extract (path, containing_line) pairs of CHECKABLE paths only."""
     results = []
     for line in text.splitlines():
-        for m in re.finditer(r"(?<!\w)(/Users/[^\s\)\]\>\,\;\"'`]+)", line):
-            p = m.group(1).rstrip(".:`)>")
-            if len(p) > 10:
-                results.append((p, line.strip()))
-        for m in re.finditer(r"(?<!\w)(~/[^\s\)\]\>\,\;\"'`]+)", line):
-            p = m.group(1).rstrip(".:`)>")
-            if len(p) > 5:
-                results.append((os.path.expanduser(p), line.strip()))
+        if _states_absence(line):
+            continue
+        found, spans = [], []
+        # Backticks delimit a path unambiguously, so a backticked path MAY
+        # contain spaces. Without this pass the bare regex stopped at the
+        # first space and claimed `~/Documents/travel` — a directory that
+        # never existed — while the real `travel website/` sat right there.
+        for m in re.finditer(r"`([^`]+)`", line):
+            inner = _clean(m.group(1))
+            if inner.startswith("/Users/") or inner.startswith("~/"):
+                found.append(inner)
+                spans.append((m.start(), m.end()))
+        for pat in (r"(?<!\w)(/Users/[^\s\)\]\>\,\;\"'`]+)",
+                    r"(?<!\w)(~/[^\s\)\]\>\,\;\"'`]+)"):
+            for m in re.finditer(pat, line):
+                # skip anything the backtick pass already claimed
+                if any(s <= m.start() < e for s, e in spans):
+                    continue
+                found.append(_clean(m.group(1)))
+        for p in found:
+            full = os.path.expanduser(p)
+            if len(full) > 10 and _is_checkable(full):
+                results.append((full, line.strip()))
     return results
 
 
@@ -78,10 +139,22 @@ def _extract_wikilinks(text: str) -> List[Tuple[str, str]]:
     """Extract ([[target]], containing_line) pairs."""
     results = []
     for line in text.splitlines():
+        # A wikilink inside backticks is quoted SYNTAX being described, not a
+        # link to follow — the mirror of the backtick rule for paths.
+        code = [(m.start(), m.end()) for m in re.finditer(r"`[^`]+`", line)]
         for m in re.finditer(r"\[\[([^\]\|]+?)(?:\|[^\]]+)?\]\]", line):
+            if any(s <= m.start() < e for s, e in code):
+                continue
             target = m.group(1).strip()
-            if target and target != "GAP":
-                results.append((target, line.strip()))
+            # [[#heading]] is an in-document anchor, not a memory file.
+            if not target or target == "GAP" or target.startswith("#"):
+                continue
+            # [[name.md]] and [[name]] point at the SAME file. Appending .md
+            # blindly produced name.md.md and reported a live memory as a
+            # broken link — 4 of 16 remaining queue items were this.
+            if target.endswith(".md"):
+                target = target[:-3]
+            results.append((target, line.strip()))
     return results
 
 
@@ -214,12 +287,14 @@ def import_memory_files(
 
         target = existing.get(mem["id"]) or fresh.get(mem["id"])
         if target is not None:
-            seen = {(e.get("source"), e.get("excerpt")) for e in target["evidence"]}
-            added = 0
-            for ev in mem["evidence"]:
-                if (ev.get("source"), ev.get("excerpt")) not in seen:
-                    target["evidence"].append(ev)
-                    added += 1
+            # REPLACE the derived rows, don't union them. Unioning meant a
+            # claim that entered the store once could never leave: fixing the
+            # .md and re-grading still reported the old path as drifted, so
+            # the repair loop had no exit. Non-derived evidence (anything a
+            # human or another adapter attached) is preserved.
+            kept = [e for e in target["evidence"]
+                    if not _is_derived(str(e.get("locator", "")))]
+            target["evidence"] = kept + mem["evidence"]
             summary["already_exists"] += 1
             continue
 

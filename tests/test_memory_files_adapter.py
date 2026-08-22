@@ -237,5 +237,168 @@ class TestRealMemoryFiles(unittest.TestCase):
         self.assertEqual(dropped, [], "cap is silently dropping real claims: %s" % dropped)
 
 
+class TestIllustrationsAreNotClaims(unittest.TestCase):
+    """A template/glob is an ILLUSTRATION, not a checkable location.
+
+    Measured on the real corpus: 11 of 25 repair-queue items were the
+    extractor asserting that '<project-slug>' or 'foo-*.tar.gz' should exist
+    on disk, then reporting their absence as knowledge drift. The instrument
+    was lying, not the world changing.
+    """
+
+    def test_templates_globs_ellipses_refused(self):
+        from nidra.adapters.memory_files import _extract_paths
+        for bad in ("~/.claude/projects/<project-slug>/x.jsonl",
+                    "~/backups/engine-*.tar.gz",
+                    "~/Library/Developer/{iOS,macOS}",
+                    "~/backups/corpora-YYYYMMDD.tar.gz",
+                    "~/.claude/projects/98e8d399-\u2026jsonl"):
+            self.assertEqual(_extract_paths("see " + bad), [],
+                             "claimed an illustration is a real path: " + bad)
+
+    def test_real_paths_and_file_line_refs_still_claim(self):
+        from nidra.adapters.memory_files import _extract_paths
+        got = _extract_paths("see /Users/x/projects/thing/setup.py here")
+        self.assertEqual(len(got), 1)
+        # a trailing :NN is a line reference; the FILE is the claim
+        got = _extract_paths("bug at /Users/x/projects/thing/app.py:45")
+        self.assertTrue(got and got[0][0].endswith("app.py"), got)
+
+
+class TestNegatedAndSpacedPaths(unittest.TestCase):
+    """Two more ways the extractor invented drift, both measured on the corpus.
+
+    1. A path a memory says is GONE was graded as "should exist" — so the
+       memory was marked drifted for being CORRECT. 2 of 24 queue items.
+    2. The regex stops at whitespace, so `~/Documents/travel website/x` was
+       truncated to `~/Documents/travel` and reported missing. 2 items.
+    """
+
+    def test_paths_stated_absent_are_not_claims(self):
+        from nidra.adapters.memory_files import _extract_paths
+        for line in (
+            "the plan file `/Users/x/plans/old.md` referenced above is gone.",
+            "not installed here; `/Users/x/.config/anthropic/` does not exist",
+            "the worktree /Users/x/wt-thing was removed after the merge",
+            "/Users/x/compose-hetzner.yml was deleted 2026-06-30 - do not recreate",
+        ):
+            self.assertEqual(_extract_paths(line), [],
+                             "graded a path the memory says is GONE: " + line)
+
+    def test_ordinary_lines_still_claim(self):
+        from nidra.adapters.memory_files import _extract_paths
+        for line in ("the guard lives in /Users/x/projects/app/main.py today",
+                     "removed the retry from /Users/x/projects/app/net.py"):
+            self.assertEqual(len(_extract_paths(line)), 1,
+                             "dropped a real claim: " + line)
+
+    def test_backticked_paths_may_contain_spaces(self):
+        from nidra.adapters.memory_files import _extract_paths
+        got = _extract_paths("marketplace lives at `~/Documents/travel website/marketplace`")
+        self.assertEqual(len(got), 1, got)
+        self.assertTrue(got[0][0].endswith("travel website/marketplace"), got[0][0])
+
+    def test_no_duplicate_when_backticked(self):
+        """The backtick pass and the bare pass must not both claim one path."""
+        from nidra.adapters.memory_files import _extract_paths
+        got = _extract_paths("see `/Users/x/projects/app/main.py` for the guard")
+        self.assertEqual(len(got), 1, got)
+
+
+class TestWikilinkTargets(unittest.TestCase):
+    """Two ways the wikilink check invented broken links (4 of 16 items).
+
+    [[name.md]] became name.md.md — the file was right there. [[#anchor]] is
+    an in-document heading link, not a memory, and became #anchor.md.
+    """
+
+    def test_md_suffix_not_doubled(self):
+        import tempfile as _tf
+        with _tf.TemporaryDirectory() as td:
+            open(os.path.join(td, "target-mem.md"), "w").write("x")
+            md = os.path.join(td, "src.md")
+            open(md, "w").write(
+                "---\nname: src\ndescription: d\n---\n"
+                "See [[target-mem.md]] for the long story of how it works.\n")
+            mem, _ = file_to_memory(md, td)
+            wl = [e for e in mem["evidence"] if e["locator"].startswith("wikilink")]
+            self.assertEqual(len(wl), 1)
+            self.assertTrue(os.path.exists(wl[0]["source"]), wl[0]["source"])
+
+    def test_anchor_links_are_not_memories(self):
+        links = _extract_wikilinks("jump to [[#increment-3]] below")
+        self.assertEqual(links, [], links)
+
+    def test_plain_link_unchanged(self):
+        links = _extract_wikilinks("see [[some-memory]] here")
+        self.assertEqual(links[0][0], "some-memory")
+
+
+class TestQuotedWikilinksAreSyntax(unittest.TestCase):
+    """A wikilink inside backticks is QUOTED SYNTAX, not a link.
+
+    Two memories describe the wikilink format itself — "parses index lines
+    and `[[wikilinks]]`" — and were marked drifted for not having a memory
+    literally named "wikilinks". Same rule the path pass uses, inverted:
+    backticks mean "this is code being shown", not "this is a location".
+    """
+
+    def test_backticked_link_is_not_a_link(self):
+        self.assertEqual(_extract_wikilinks("parses index lines and `[[wikilinks]]` too"), [])
+        self.assertEqual(_extract_wikilinks("strip `<poem>/{{tpl}}/[[link]]` markup"), [])
+
+    def test_unbackticked_link_still_counts(self):
+        got = _extract_wikilinks("related: [[some-memory]] and `code` here")
+        self.assertEqual([g[0] for g in got], ["some-memory"])
+
+
+class TestReimportReplacesDerivedEvidence(unittest.TestCase):
+    """Fixing a memory file must be able to CLEAR its drift.
+
+    Evidence for a memory-file memory is derived from the file. The importer
+    unioned it, so a claim that entered the store once could never leave: the
+    owner fixed the .md, re-graded, and the queue still showed the old path.
+    The correction loop had no exit. Derived rows are now replaced.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.mem_dir = os.path.join(self.tmp, "memory")
+        os.makedirs(self.mem_dir)
+        self.store = Store(os.path.join(self.tmp, "store"))
+        self.store.init()
+        self.f = os.path.join(self.mem_dir, "m.md")
+
+    def _write(self, body):
+        with open(self.f, "w") as fh:
+            fh.write("---\nname: m\ndescription: a memory with a long enough statement\n---\n" + body)
+
+    def test_removing_a_path_from_the_file_removes_the_claim(self):
+        self._write("the thing lives at /Users/x/projects/gone/old.py right now\n")
+        import_memory_files(self.store, self.mem_dir)
+        locs = [e["locator"] for e in self.store.load()[0]["evidence"]]
+        self.assertIn("path:/Users/x/projects/gone/old.py", locs)
+
+        self._write("the thing lives at /Users/x/projects/here/new.py right now\n")
+        import_memory_files(self.store, self.mem_dir)
+        locs = [e["locator"] for e in self.store.load()[0]["evidence"]]
+        self.assertNotIn("path:/Users/x/projects/gone/old.py", locs,
+                         "stale claim survived a re-import: the repair loop has no exit")
+        self.assertIn("path:/Users/x/projects/here/new.py", locs)
+
+    def test_hand_added_evidence_is_preserved(self):
+        """Only DERIVED rows are replaced — anything else stays."""
+        self._write("the thing lives at /Users/x/projects/here/new.py right now\n")
+        import_memory_files(self.store, self.mem_dir)
+        mems = self.store.load()
+        mems[0]["evidence"].append({"source": "manual", "excerpt": "hand added",
+                                    "sha256": "x", "locator": "command:pytest -q",
+                                    "checked_at": None})
+        self.store.save(mems)
+        import_memory_files(self.store, self.mem_dir)
+        locs = [e["locator"] for e in self.store.load()[0]["evidence"]]
+        self.assertIn("command:pytest -q", locs, "re-import ate non-derived evidence")
+
+
 if __name__ == "__main__":
     unittest.main()

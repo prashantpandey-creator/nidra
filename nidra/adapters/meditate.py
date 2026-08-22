@@ -89,6 +89,13 @@ def import_sessions(
 
         if not mem.get("evidence"):
             summary["no_anchor"] += 1
+            # No turns AND no anchor: an empty transcript, not a session
+            # anyone had. Its statement holds no claim, so it can never be
+            # verified — it just sits `unverified` forever and drowns the
+            # real drift signal in the census. A session WITH turns but no
+            # anchor still imports; it has content, it just can't be pinned.
+            if not session.get("counts", {}).get("user", 0):
+                continue
 
         if mem["id"] in existing or mem["id"] in fresh:
             summary["already_exists"] += 1

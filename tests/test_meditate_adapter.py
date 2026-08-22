@@ -112,6 +112,25 @@ def test_no_anchor_counted():
         assert r["imported"] == 1  # still imports, just unverified
 
 
+def test_empty_transcripts_are_not_imported():
+    """0 user turns AND no anchor = an empty file, not a session anyone had.
+
+    Its statement carries no claim, so it can never be verified and sits
+    `unverified` forever — 3 of the 5 remaining unverified memories on the
+    real store were "Session '(untitled)' on unknown. 0 turns, 0 files".
+    A session with turns but no anchor (test_no_anchor_counted) still
+    imports: it has real content, it just can't be anchored.
+    """
+    with tempfile.TemporaryDirectory() as d:
+        store = Store(d); store.init()
+        empty = {"session_id": "e1", "file": "e1.jsonl", "counts": {"user": 0},
+                 "files_touched": [], "sprawl_score": 0.0}
+        r = import_sessions(store, [empty, FIXTURE])
+        assert r["scanned"] == 2, r
+        assert r["imported"] == 1, "imported an empty transcript: %s" % r
+        assert [m["subject"] for m in store.load()] == ["session:" + FIXTURE["session_id"]]
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     failed = 0
