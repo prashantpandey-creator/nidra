@@ -40,7 +40,14 @@ _NUM = re.compile(r"\d+(?:\.\d+)?")
 def _parse_ts(value: Optional[str]) -> Optional[datetime]:
     if not value:
         return None
-    dt = datetime.fromisoformat(value)
+    # Python <3.11 fromisoformat rejects the JS-style 'Z' suffix. The first
+    # launchd heartbeat (system python 3.9.6) crashed the whole sleep pass on
+    # one such timestamp; interactive runs (3.14) never saw it. One bad
+    # timestamp must degrade to None, never kill consolidation.
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt
