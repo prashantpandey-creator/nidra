@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nidra"
+name = "nidra-agent-memory"
 version = "0.1.0"
 description = "The sleep cycle for AI memory: every memory carries its evidence; a scheduled pass keeps the evidence honest."
 readme = "README.md"
