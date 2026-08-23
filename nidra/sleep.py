@@ -26,7 +26,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from .grade import grade
+from .grade import evidence_scope, grade
 from .store import Store, normalize, utcnow
 
 REVIEW_INTERVALS_DAYS = [1, 3, 7, 14, 30, 90]
@@ -148,6 +148,10 @@ def run_sleep(store: Store, judge: Any = None, now: Optional[str] = None) -> Dic
                 "%s -> %s (%s)" % (old_status, new_status, "; ".join(reasons)),
             )
         m["epistemic"]["evidence_status"] = new_status
+        # Orthogonal to the grade: checked how well vs checked against
+        # WHAT. 43% of evidenced memories were green on quote-only
+        # evidence, which no change in the world can falsify.
+        m["epistemic"]["evidence_scope"] = evidence_scope(m)
         if new_status == "machine_checked":
             m["epistemic"]["confidence"] = max(m["epistemic"]["confidence"], 0.9)
             for ev in m["evidence"]:

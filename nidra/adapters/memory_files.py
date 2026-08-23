@@ -99,7 +99,7 @@ _ABSENCE_PHRASES = (
 def _is_derived(locator: str) -> bool:
     """True for evidence this adapter generates from the .md file itself."""
     return (locator.startswith("path:") or locator.startswith("wikilink:")
-            or locator == "content_anchor")
+            or locator.startswith("git:") or locator == "content_anchor")
 
 
 def _is_checkable(p: str) -> bool:
@@ -180,6 +180,63 @@ def _extract_paths(text: str) -> List[Tuple[str, str]]:
     return results
 
 
+# A 7-40 char lowercase hex word in backticks is a commit citation — 419 of
+# them across 38% of the real memory corpus, the largest untapped source of
+# world-decidable evidence. But a SHA alone is not a claim: absent from the
+# repos we happen to know about is not proof the commit is gone. It becomes a
+# claim only when the same memory names a path that resolves to a real repo.
+MAX_REPOS = 6          # bound the locator; memories rarely span more
+_SHA_RE = re.compile(r"`([0-9a-f]{7,40})`")
+
+
+def _repo_root(path: str) -> Optional[str]:
+    """Nearest ancestor containing .git, or None. No subprocess: walking up
+    is cheaper than asking git, and this runs once per candidate path."""
+    p = os.path.abspath(os.path.expanduser(path))
+    while True:
+        if os.path.isdir(os.path.join(p, ".git")):
+            return p
+        parent = os.path.dirname(p)
+        if parent == p:
+            return None
+        p = parent
+
+
+def _extract_git_claims(text: str) -> List[Tuple[str, str]]:
+    """(locator, containing_line) for commit citations we can actually pin.
+
+    Requires BOTH a sha-shaped token and a path in the same memory that lands
+    inside a git repo. Without the repo the claim is unfalsifiable, and an
+    unfalsifiable claim graded as failing is exactly the instrument error this
+    whole layer exists to prevent.
+    """
+    # Any absolute-looking token is a CANDIDATE; _repo_root accepts only those
+    # that really contain a .git, so the filesystem is the filter. (Deliberately
+    # wider than _extract_paths, which is pinned to /Users and ~ — a repo
+    # anywhere on disk is still a repo, and a wrong guess simply resolves to
+    # None rather than becoming a claim.)
+    repos = []
+    for tok in re.findall(r"(?<!\w)(~?/[^\s`,;\"'()\[\]]+)", text):
+        r = _repo_root(_clean(tok))
+        if r and r not in repos:
+            repos.append(r)
+    if not repos:
+        return []
+    # ALL named repos, not the first. Guessing repos[0] and then reporting a
+    # definite "drifted" produced 31 false failures on the live store — every
+    # sampled one a real commit sitting in another repo the same memory named.
+    scope = "|".join(repos[:MAX_REPOS])
+    results = []
+    for line in text.splitlines():
+        for m in _SHA_RE.finditer(line):
+            sha = m.group(1)
+            # all-decimal is a number, not a hash; require at least one a-f
+            if not any(c in "abcdef" for c in sha):
+                continue
+            results.append(("git:%s@%s" % (scope, sha), line.strip()))
+    return results
+
+
 def _extract_wikilinks(text: str) -> List[Tuple[str, str]]:
     """Extract ([[target]], containing_line) pairs."""
     results = []
@@ -254,7 +311,7 @@ def file_to_memory(
     )
     mem["id"] = "mem_" + sha256_text(f"memfile|{name}")[:12]
 
-    stats = {"paths": 0, "wikilinks": 0, "content": 0}
+    stats = {"paths": 0, "wikilinks": 0, "content": 0, "git": 0}
 
     paths = _extract_paths(body)
     for path, line in paths[:MAX_CLAIMS]:
@@ -278,6 +335,16 @@ def file_to_memory(
             "checked_at": None,
         })
         stats["wikilinks"] += 1
+
+    for locator, line in _extract_git_claims(body)[:MAX_CLAIMS]:
+        mem["evidence"].append({
+            "source": filepath,
+            "excerpt": line[:ANCHOR_MAX],
+            "sha256": sha256_text(line[:ANCHOR_MAX]),
+            "locator": locator,
+            "checked_at": None,
+        })
+        stats["git"] = stats.get("git", 0) + 1
 
     anchor = _best_anchor(body)
     if anchor:
