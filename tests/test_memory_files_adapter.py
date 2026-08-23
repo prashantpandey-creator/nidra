@@ -305,6 +305,28 @@ class TestNegatedAndSpacedPaths(unittest.TestCase):
         self.assertEqual(len(got), 1, got)
 
 
+class TestRepairQueueSelfReferenceNotAClaim(unittest.TestCase):
+    """repair-queue.md is unlinked when clean and recreated when a memory
+    fails — including the memory that mentions it. Grading that mention as a
+    location claim means the memory can never settle: passing deletes its own
+    evidence target, which fails the memory, which recreates the file.
+    Measured live 2026-08-23: mem_75bd7f8c0833 oscillated demoted/regraded 4
+    times in 90 minutes before this exclusion.
+    """
+
+    def test_repair_queue_mention_is_not_a_claim(self):
+        from nidra.adapters.memory_files import _extract_paths
+        line = ("open `~/.claude/meditation/repair-queue.md` and `ls` the "
+                "paths it names before editing any memory.")
+        self.assertEqual(_extract_paths(line), [],
+                         "graded the repair queue's own path as a claim")
+
+    def test_other_meditation_paths_still_claim(self):
+        from nidra.adapters.memory_files import _extract_paths
+        got = _extract_paths("see ~/.claude/meditation/STILLNESS.md for the reading")
+        self.assertEqual(len(got), 1, got)
+
+
 class TestWikilinkTargets(unittest.TestCase):
     """Two ways the wikilink check invented broken links (4 of 16 items).
 

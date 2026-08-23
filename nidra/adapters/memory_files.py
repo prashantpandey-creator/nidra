@@ -66,6 +66,17 @@ def _parse_frontmatter(text: str) -> Tuple[Dict[str, str], str]:
 _NOT_A_CLAIM = ("<", ">", "{", "}", "*", "?", "\u2026", "...", "$", "%s")
 _PLACEHOLDER_WORDS = ("YYYYMMDD", "YYYY-MM-DD", "HHMMSS", "<id", "<ver")
 
+# The repair queue's OWN file is unlinked when the queue is empty and
+# recreated the moment a memory fails — including this memory, when it
+# mentions the queue's own path. A memory citing it can never settle: passing
+# deletes the file (its own evidence target), which fails the memory, which
+# recreates the file, which passes the memory again. Measured 2026-08-23:
+# mem_75bd7f8c0833 oscillated demoted/regraded 4 times in 90 minutes before
+# this exclusion. This is item #1's bug (illustration, not location) in a
+# form substring matching couldn't catch: a real path that is the grading
+# pipeline's own moving part, not a durable fact about the world.
+_SELF_REFERENTIAL_PATHS = ("/.claude/meditation/repair-queue.md",)
+
 # A memory that RECORDS a deletion ("the plan file X is gone") states a fact
 # about absence. Grading it as "X should exist" marks the memory drifted for
 # being correct — the exact inversion of the tool's purpose. Measured: 2 of
@@ -96,6 +107,8 @@ def _is_checkable(p: str) -> bool:
     if any(t in p for t in _NOT_A_CLAIM):
         return False
     if any(w in p for w in _PLACEHOLDER_WORDS):
+        return False
+    if any(s in p for s in _SELF_REFERENTIAL_PATHS):
         return False
     return True
 
