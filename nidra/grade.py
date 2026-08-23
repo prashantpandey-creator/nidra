@@ -128,31 +128,52 @@ def verify_evidence_row(ev: Dict[str, Any]) -> Tuple[str, str]:
     return "drifted", "excerpt no longer present in source"
 
 
-# Locator prefixes whose truth is decided BY THE WORLD, not by the memory
-# quoting itself correctly. This is the distinction `machine_checked` was
-# hiding: measured 2026-08-23, 206 of 483 evidenced memories (43%) were
-# quote-only — green, and unfalsifiable by any change in the world.
-_WORLD_PREFIXES = ("path:", "wikilink:", "git:")
+DEFAULT_STORE_ROOTS = (
+    os.path.expanduser("~/claude-sync/memory"),
+    os.path.expanduser("~/.claude/meditation"),
+)
+
+_SCOPE_RANK = {"none": 0, "quote": 1, "internal": 2, "world": 3}
 
 
-def evidence_scope(mem: Dict[str, Any]) -> str:
-    """'world' | 'quote' | 'none' — orthogonal to the grade, not a rank.
+def _row_scope(ev: Dict[str, Any], store_roots: Tuple[str, ...]) -> str:
+    """What is THIS row's truth answerable to?
 
-    world: at least one claim the world can refute (a file, a link target, a
-           commit). Corroborated.
-    quote: only content anchors — proves the memory quotes its source, which
-           no external change can ever falsify. Consistent, not corroborated.
+    world    — a referent outside the memory store: a file on disk, a commit.
+    internal — another memory file in the same store (wikilinks, and paths
+               that point back inside the store). Graph consistency.
+    quote    — a content anchor: the memory quotes its own source correctly.
+    """
+    loc = str(ev.get("locator") or "")
+    if loc.startswith("git:"):
+        return "world"
+    if loc.startswith("path:"):
+        p = os.path.expanduser(loc[5:])
+        return "internal" if p.startswith(tuple(store_roots)) else "world"
+    if loc.startswith("wikilink:"):
+        return "internal"
+    return "quote"
 
-    A knowledge base can be perfectly self-consistent and entirely wrong. The
-    grade says how well-checked; this says checked against WHAT.
+
+def evidence_scope(mem: Dict[str, Any],
+                   store_roots: Tuple[str, ...] = DEFAULT_STORE_ROOTS) -> str:
+    """'world' | 'internal' | 'quote' | 'none' — orthogonal to the grade.
+
+    The grade says how well-checked. This says checked against WHAT, and it
+    exists because `machine_checked` hid the difference.
+
+    A wikilink is deliberately NOT world. Its target is another memory file in
+    the same store, so resolving it proves the graph is internally consistent
+    — precisely the property that can hold while every statement is false.
+    Counting wikilinks as world reported 56% of the live store as
+    world-decidable; strictly, it is 13%. A metric whose only job is to avoid
+    flattering the system must not flatter the system.
     """
     rows = mem.get("evidence") or []
     if not rows:
         return "none"
-    for ev in rows:
-        if str(ev.get("locator") or "").startswith(_WORLD_PREFIXES):
-            return "world"
-    return "quote"
+    return max((_row_scope(ev, store_roots) for ev in rows),
+               key=lambda s: _SCOPE_RANK[s])
 
 
 def grade(mem: Dict[str, Any]) -> Tuple[str, List[str], List[str]]:

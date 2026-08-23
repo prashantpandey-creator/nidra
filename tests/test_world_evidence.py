@@ -116,40 +116,67 @@ class TestGitEvidence(unittest.TestCase):
 
 
 class TestEvidenceScope(unittest.TestCase):
-    def test_quote_only_memory_is_scope_quote(self):
-        m = new_memory("a statement")
-        m["evidence"] = [_row("content_anchor", source="/tmp/x", excerpt="hello")]
-        self.assertEqual(evidence_scope(m), "quote")
+    """Scope must not flatter itself.
 
-    def test_path_claim_makes_it_world(self):
-        m = new_memory("a statement")
-        m["evidence"] = [_row("content_anchor", excerpt="hello"),
-                         _row("path:/tmp")]
-        self.assertEqual(evidence_scope(m), "world")
+    First version counted `wikilink:` as world evidence and reported 56% of
+    the live store as world-decidable. But a wikilink target is another
+    memory FILE IN THE SAME STORE — checking it proves the graph is
+    internally consistent, which is exactly the property that can hold while
+    every statement is wrong. Recomputed strictly: 13%, not 56%. A 4x
+    flattering number in the one metric whose whole job is not to flatter.
+    """
 
-    def test_git_claim_makes_it_world(self):
-        m = new_memory("a statement")
+    def test_wikilink_is_INTERNAL_not_world(self):
+        m = new_memory("s")
+        m["evidence"] = [_row("wikilink:[[other-memory]]", source="/tmp/x")]
+        self.assertEqual(evidence_scope(m, store_roots=("/tmp",)), "internal")
+
+    def test_path_outside_the_store_is_world(self):
+        m = new_memory("s")
+        m["evidence"] = [_row("path:/Users/x/projects/app/main.py")]
+        self.assertEqual(evidence_scope(m, store_roots=("/tmp/store",)), "world")
+
+    def test_path_INSIDE_the_store_is_internal(self):
+        """A memory pointing at the memory directory is talking about itself."""
+        m = new_memory("s")
+        m["evidence"] = [_row("path:/tmp/store/memory/other.md")]
+        self.assertEqual(evidence_scope(m, store_roots=("/tmp/store",)), "internal")
+
+    def test_git_is_world(self):
+        m = new_memory("s")
         m["evidence"] = [_row("git:/tmp/r@abc1234")]
-        self.assertEqual(evidence_scope(m), "world")
+        self.assertEqual(evidence_scope(m, store_roots=("/tmp/store",)), "world")
+
+    def test_quote_only_memory_is_quote(self):
+        m = new_memory("s")
+        m["evidence"] = [_row("content_anchor", source="/tmp/x", excerpt="hello")]
+        self.assertEqual(evidence_scope(m, store_roots=("/tmp",)), "quote")
 
     def test_no_evidence_is_none(self):
-        m = new_memory("a statement")
+        m = new_memory("s")
         m["evidence"] = []
         self.assertEqual(evidence_scope(m), "none")
 
+    def test_strongest_scope_wins(self):
+        """world > internal > quote — one external referent is enough."""
+        m = new_memory("s")
+        m["evidence"] = [_row("content_anchor", excerpt="hello"),
+                         _row("wikilink:[[x]]", source="/tmp/store/x.md"),
+                         _row("path:/Users/x/app.py")]
+        self.assertEqual(evidence_scope(m, store_roots=("/tmp/store",)), "world")
+
     def test_scope_is_orthogonal_to_grade(self):
-        """A quote-only memory can still be machine_checked — that is exactly
-        the conflation being surfaced, not a bug. The point is that the two
-        facts are now separately readable."""
+        """A quote-only memory can still be machine_checked — that IS the
+        conflation being surfaced, not a bug."""
         with tempfile.TemporaryDirectory() as d:
             src = os.path.join(d, "m.md")
-            open(src, "w").write("the anchor line lives here\n")
+            with open(src, "w") as fh:
+                fh.write("the anchor line lives here\n")
             m = new_memory("s")
             m["evidence"] = [_row("content_anchor", source=src,
                                   excerpt="the anchor line lives here")]
-            status, _, _ = grade(m)
-            self.assertEqual(status, "machine_checked")
-            self.assertEqual(evidence_scope(m), "quote")
+            self.assertEqual(grade(m)[0], "machine_checked")
+            self.assertEqual(evidence_scope(m, store_roots=("/nowhere",)), "quote")
 
 
 class TestGitClaimExtraction(unittest.TestCase):
