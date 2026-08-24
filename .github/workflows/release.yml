@@ -1,0 +1,90 @@
+name: release
+
+# Publish to PyPI with NO credential anywhere.
+#
+# There is no token in this file, no secret in the repo, and nothing for a
+# human to paste. GitHub's OIDC provider proves to PyPI that this exact
+# workflow, in this exact repository, is the thing asking to publish — and
+# PyPI matches that against a publisher it already trusts.
+#
+# This exists because the token path failed twice and failed badly: the first
+# upload 403'd, and the token itself ended up pasted somewhere it should never
+# have been. A credential that cannot leak is better than a credential handled
+# carefully.
+#
+# One-time setup on PyPI (no secret involved):
+#   https://pypi.org/manage/account/publishing/  ->  "Add a new pending publisher"
+#     PyPI Project Name : nidra-agent-memory
+#     Owner             : prashantpandey-creator
+#     Repository name   : nidra
+#     Workflow name     : release.yml
+#     Environment name  : pypi
+#
+# Then publish by tagging:  git tag v0.1.0 && git push origin v0.1.0
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:          # or run it by hand from the Actions tab
+
+jobs:
+  build:
+    name: build the distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # pytest, not `unittest discover`. The tests use pytest's tmp_path
+      # fixture and tests/ has no __init__.py, so unittest answers
+      # "Start directory is not importable" and the release would fail on its
+      # own gate. ci.yml already had this right; this file did not, until it
+      # was actually run.
+      - name: install the package and the test runner
+        run: |
+          python -m pip install --quiet --upgrade pip
+          python -m pip install --quiet -e . pytest
+
+      # The suite gates the release. A package that ships red tests is worse
+      # than one that never shipped: it teaches whoever installs it that the
+      # badge means nothing.
+      - name: run the tests
+        run: pytest -q
+
+      # nidra's own proof command: it plants known defects, runs two sleep
+      # passes, and verifies every planted defect was caught. --strict exits
+      # non-zero on any miss, so a broken pass cannot be released.
+      - name: prove the sleep pass catches what it claims
+        run: nidra demo --strict
+
+      - name: build wheel + sdist
+        run: |
+          python -m pip install --quiet build twine
+          python -m build
+          python -m twine check dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi           # optional per the docs, strongly encouraged
+    permissions:
+      id-token: write           # MANDATORY for trusted publishing, and the
+                                # only permission this job gets. Set at job
+                                # level, not workflow level, so nothing else
+                                # in the run can mint an identity token.
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      # No `password:` input. No secret. That is the whole point.
+      - uses: pypa/gh-action-pypi-publish@release/v1
