@@ -46,9 +46,20 @@ def _row(locator, source="", excerpt="x"):
 
 
 def _git_repo(d):
-    """A real repo with one real commit. Returns (path, sha)."""
+    """A real repo with one real, DETERMINISTIC commit. Returns (path, sha).
+
+    The commit is pinned — fixed name, email, date and content — so the sha is
+    the same on every machine and every run. It used to inherit whatever git
+    generated, and the extractor deliberately refuses an all-numeric token
+    (`1234567` in backticks is a number, not a hash). A 7-character sha prefix
+    is all digits about 3.7% of the time, so these tests failed at random: they
+    passed locally and went red in CI on sha 37687475. A test whose outcome
+    depends on a coin flip is not a test.
+    """
     env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t",
-               GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
+               GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t",
+               GIT_AUTHOR_DATE="2020-01-01T00:00:00+0000",
+               GIT_COMMITTER_DATE="2020-01-01T00:00:00+0000")
     subprocess.run(["git", "init", "-q", d], check=True, env=env)
     open(os.path.join(d, "f.txt"), "w").write("hello")
     subprocess.run(["git", "-C", d, "add", "f.txt"], check=True, env=env)
@@ -259,6 +270,87 @@ class TestMultiRepoGitClaims(unittest.TestCase):
                     "git:%s|%s@%s" % (self.r1, self.r2, "0" * 40),
                     "git:%s/nope@%s" % (self.tmp, "a" * 40)):
             self.assertNotEqual(verify_evidence_row(_row(loc))[0], "drifted", loc)
+
+
+class TestLargeSourceScanning(unittest.TestCase):
+    """Verification must not slurp the whole source file.
+
+    Measured 2026-08-23: 91 evidence rows point at sources over 5MB — the
+    largest a 117MB session transcript — and the grader read each fully into
+    memory to look for a 200-char excerpt. A full grade pass took 34.9s and
+    `meditate doctor` went from 15s to a >2min timeout. Streaming with early
+    exit is exact for any excerpt and holds one chunk, not one file.
+    """
+
+    def test_finds_an_excerpt_far_into_a_large_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "big.txt")
+            with open(src, "w") as fh:
+                fh.write("filler\n" * 400_000)          # ~2.8MB of noise
+                fh.write("THE ANCHOR LINE IS HERE\n")
+            state, _ = verify_evidence_row(
+                _row("content_anchor", source=src, excerpt="THE ANCHOR LINE IS HERE"))
+            self.assertEqual(state, "ok")
+
+    def test_absent_excerpt_in_a_large_file_is_drift(self):
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "big.txt")
+            with open(src, "w") as fh:
+                fh.write("filler\n" * 400_000)
+            state, _ = verify_evidence_row(
+                _row("content_anchor", source=src, excerpt="NEVER WRITTEN"))
+            self.assertEqual(state, "drifted")
+
+    def test_excerpt_split_across_a_chunk_boundary_is_still_found(self):
+        """The falsifier for chunked reading: an excerpt straddling the seam
+        must not be missed. Overlap has to be at least len(excerpt)."""
+        from nidra.grade import _CHUNK
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "seam.txt")
+            excerpt = "STRADDLE" * 8              # 64 chars
+            with open(src, "w") as fh:
+                fh.write("x" * (_CHUNK - 20))     # push the excerpt over the seam
+                fh.write(excerpt)
+                fh.write("y" * 100)
+            state, _ = verify_evidence_row(
+                _row("content_anchor", source=src, excerpt=excerpt))
+            self.assertEqual(state, "ok")
+
+    def test_grading_a_large_source_is_not_slower_than_a_second(self):
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "big.txt")
+            with open(src, "w") as fh:
+                fh.write("filler\n" * 1_500_000)        # ~10MB
+                fh.write("ANCHOR\n")
+            import time
+            t0 = time.time()
+            verify_evidence_row(_row("content_anchor", source=src, excerpt="ANCHOR"))
+            self.assertLess(time.time() - t0, 1.0)
+
+
+class TestAllDigitShaIsDeliberatelyRefused(unittest.TestCase):
+    """The refusal that caused the CI flake, pinned so it is a choice.
+
+    `_extract_git_claims` skips an all-numeric backticked token, because
+    `1234567` is far more often a number than a commit. Real git shas CAN be
+    all digits — about 3.7% of 7-character prefixes — so this is a knowing
+    trade of a little recall for precision, and it must be stated rather than
+    discovered when a random fixture sha happens to be 37687475 and CI goes
+    red on a machine where it had always passed.
+    """
+
+    def test_all_digit_token_is_not_claimed(self):
+        from nidra.adapters.memory_files import _extract_git_claims
+        body = "in repo /Users/x/projects/app/main.py the fix was `1234567`"
+        self.assertEqual(_extract_git_claims(body), [])
+
+    def test_a_sha_with_one_hex_letter_is_claimed(self):
+        from nidra.adapters.memory_files import _extract_git_claims
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            repo, sha = _git_repo(d)
+            got = _extract_git_claims("see %s/f.txt fixed in `%s`" % (repo, sha[:7]))
+            self.assertEqual(len(got), 1, got)
 
 
 if __name__ == "__main__":
