@@ -27,7 +27,7 @@ write → grade with evidence → sleep on schedule → recall by trust
 No API key, no setup, no trust required:
 
 ```bash
-pip install git+https://github.com/prashantpandey-creator/nidra
+pip install nidra-agent-memory
 nidra demo --strict
 ```
 
