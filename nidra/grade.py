@@ -21,6 +21,9 @@ from typing import Any, Dict, List, Tuple
 from .store import sha256_text
 
 
+_CHUNK = 1 << 20          # 1MB read window
+
+
 @lru_cache(maxsize=128)
 def _read_source(path: str, mtime_ns: int, size: int) -> str:
     # mtime_ns + size key the cache: a changed file is a different entry.
@@ -31,6 +34,38 @@ def _read_source(path: str, mtime_ns: int, size: int) -> str:
 def _source_content(path: str) -> str:
     st = os.stat(path)
     return _read_source(path, st.st_mtime_ns, st.st_size)
+
+
+@lru_cache(maxsize=4096)
+def _source_contains(path: str, mtime_ns: int, size: int, needle: str) -> bool:
+    """Is `needle` in this file? Streamed, early-exit, one chunk in memory.
+
+    The old path read the whole source to look for a 200-char excerpt.
+    Measured on the live store: 91 evidence rows point at sources over 5MB,
+    the largest a 117MB transcript, and a full grade pass took 34.9s —
+    `meditate doctor` went from 15s to a >2 minute timeout. Streaming is
+    exact for any excerpt (chunks overlap by len(needle)-1, so nothing is
+    lost at a seam) and stops at the first hit.
+    """
+    if not needle:
+        return True
+    if size <= _CHUNK:                       # small file: keep the shared cache
+        return needle in _read_source(path, mtime_ns, size)
+    overlap = len(needle) - 1
+    tail = ""
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        while True:
+            block = fh.read(_CHUNK)
+            if not block:
+                return False
+            if needle in tail + block:
+                return True
+            tail = (tail + block)[-overlap:] if overlap else ""
+
+
+def _source_has(path: str, needle: str) -> bool:
+    st = os.stat(path)
+    return _source_contains(path, st.st_mtime_ns, st.st_size, needle)
 
 
 GIT_TIMEOUT_S = 5
@@ -112,10 +147,10 @@ def verify_evidence_row(ev: Dict[str, Any]) -> Tuple[str, str]:
     if not os.path.exists(source):
         return "source_missing", "source not found: %s" % source
     try:
-        content = _source_content(source)
+        found = _source_has(source, excerpt)
     except OSError as exc:
         return "source_missing", str(exc)
-    if excerpt in content:
+    if found:
         return "ok", "excerpt present in source"
     if not excerpt.isascii():
         # ensure_ascii JSONL writers store non-ASCII as \uXXXX escapes; the
@@ -123,7 +158,7 @@ def verify_evidence_row(ev: Dict[str, Any]) -> Tuple[str, str]:
         import json as _json
 
         escaped = _json.dumps(excerpt, ensure_ascii=True)[1:-1]
-        if escaped in content:
+        if _source_has(source, escaped):
             return "ok", "excerpt present in source (json-escaped form)"
     return "drifted", "excerpt no longer present in source"
 
