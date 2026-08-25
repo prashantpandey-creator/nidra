@@ -132,45 +132,59 @@ def run_sleep(store: Store, judge: Any = None, now: Optional[str] = None) -> Dic
         if not m["active"]:
             continue
         old_status = m["epistemic"]["evidence_status"]
-        new_status, states, reasons = grade(m)
+        new_status, states, reasons = grade(m, now_iso)
+        # Same clock as every other stage in this function. Reading valid time
+        # off the wall clock while `now` drove everything else made replay
+        # silently wrong: a window open AT THE REPLAYED INSTANT still counted
+        # as shut because it is shut today.
+        live = in_force(m, now_iso)
         if "corrupt" in states and _flag(m, "integrity"):
             act("integrity", m["id"], "; ".join(reasons))
         if "drifted" in states:
             if _flag(m, "drifted"):
                 act("demoted", m["id"], "evidence drift: " + "; ".join(reasons))
             m["epistemic"]["confidence"] = min(m["epistemic"]["confidence"], 0.3)
-        elif not in_force(m):
-            # Valid time closed. grade() already declined to re-check it; the
-            # confidence floor and the review schedule below must not treat
-            # that silence as a fresh pass either. Leave it exactly as it was
-            # earned, and never let it reach the repair queue.
+        elif not live:
+            # Valid time closed. grade() already declined to re-check it, and
+            # the confidence floor must not read that silence as a fresh pass.
+            # Leave the grade exactly as it was earned; never let it reach the
+            # repair queue. It still falls through to scheduling below — an
+            # earlier version returned here, which froze last_reviewed and
+            # review_due forever and left every expired memory permanently
+            # overdue by construction.
             m["epistemic"]["evidence_scope"] = evidence_scope(m)
-            continue
         elif m["flags"] and "drifted" in m["flags"] and new_status == "machine_checked":
             m["flags"].remove("drifted")  # the world matches the memory again
-        if new_status != old_status and "drifted" not in states:
+        if new_status != old_status and "drifted" not in states and live:
             act(
                 "regraded",
                 m["id"],
                 "%s -> %s (%s)" % (old_status, new_status, "; ".join(reasons)),
             )
-        m["epistemic"]["evidence_status"] = new_status
+        if live:
+            m["epistemic"]["evidence_status"] = new_status
         # Orthogonal to the grade: checked how well vs checked against
         # WHAT. 43% of evidenced memories were green on quote-only
         # evidence, which no change in the world can falsify.
-        m["epistemic"]["evidence_scope"] = evidence_scope(m)
-        if new_status == "machine_checked":
-            m["epistemic"]["confidence"] = max(m["epistemic"]["confidence"], 0.9)
-            for ev in m["evidence"]:
-                ev["checked_at"] = now_iso
-        elif new_status == "source_linked":
-            m["epistemic"]["confidence"] = min(max(m["epistemic"]["confidence"], 0.6), 0.7)
+        if live:
+            m["epistemic"]["evidence_scope"] = evidence_scope(m)
+            if new_status == "machine_checked":
+                m["epistemic"]["confidence"] = max(m["epistemic"]["confidence"], 0.9)
+                for ev in m["evidence"]:
+                    ev["checked_at"] = now_iso
+            elif new_status == "source_linked":
+                m["epistemic"]["confidence"] = min(max(m["epistemic"]["confidence"], 0.6), 0.7)
 
         # ---- stage 4 (per-memory): review scheduling ---------------------
         last = _parse_ts(m["epistemic"].get("last_reviewed"))
         due = _parse_ts(m["epistemic"].get("review_due")) or now_dt
         prev_days = (due - last).days if last else 0
-        if new_status == "machine_checked":
+        if not live:
+            # Closed window: the fact cannot change again, so re-reading its
+            # source can never produce news. Schedule at the longest interval
+            # rather than leaving it pinned overdue.
+            idx = len(REVIEW_INTERVALS_DAYS) - 1
+        elif new_status == "machine_checked":
             idx = min(_interval_index(max(prev_days, 1)) + 1, len(REVIEW_INTERVALS_DAYS) - 1)
         else:
             idx = 0

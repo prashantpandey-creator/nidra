@@ -185,6 +185,59 @@ def test_expired_memory_still_reports_its_scope(tmp_path):
     assert store.load()[0]["epistemic"]["evidence_scope"] == "world"
 
 
+def test_replay_reads_valid_time_at_the_REPLAYED_instant(tmp_path):
+    """run_sleep must have ONE clock.
+
+    The first cut of this feature threaded ``now`` through review scheduling
+    and prune, but read valid time off the wall clock. So replaying a backfill
+    at a date when the window was WIDE OPEN still skipped the drift check,
+    because the window is shut *today* — the demotion and the 0.3 confidence
+    floor both silently vanished. No test in the repo passed now= to
+    run_sleep, so the suite could not see it.
+    """
+    store = Store(str(tmp_path / "store"))
+    store.init()
+    m, src = _drifting(tmp_path)
+    m["temporal"]["valid_from"] = "2026-05-01T00:00:00+00:00"
+    m["temporal"]["valid_until"] = "2026-08-01T00:00:00+00:00"   # shut TODAY
+    store.save([m])
+    src.write_text("TIMEOUT = 90\n")                              # world moved on
+
+    # Replayed at an instant INSIDE the window: must behave like a live memory.
+    run_sleep(store, now="2026-06-01T00:00:00+00:00")
+    got = store.load()[0]
+    assert "drifted" in (got["flags"] or []), "replay used the wall clock, not the replayed instant"
+    assert got["epistemic"]["confidence"] <= 0.3, "the drift confidence floor was skipped"
+
+
+def test_replay_outside_the_window_still_holds(tmp_path):
+    """The falsifier for the test above: same store, instant OUTSIDE the
+    window, must NOT demote. Otherwise the fix would just be 'always check'."""
+    store = Store(str(tmp_path / "store"))
+    store.init()
+    m, src = _drifting(tmp_path)
+    m["temporal"]["valid_until"] = "2026-08-01T00:00:00+00:00"
+    store.save([m])
+    src.write_text("TIMEOUT = 90\n")
+    run_sleep(store, now="2026-08-20T00:00:00+00:00")
+    assert "drifted" not in (store.load()[0]["flags"] or [])
+
+
+def test_expired_memory_is_not_left_permanently_overdue(tmp_path):
+    """The `continue` that skipped scheduling froze review_due forever."""
+    store = Store(str(tmp_path / "store"))
+    store.init()
+    m, _ = _drifting(tmp_path)
+    m["temporal"]["valid_until"] = _iso(-1)
+    m["epistemic"]["review_due"] = "2026-01-02T00:00:00+00:00"
+    m["epistemic"]["last_reviewed"] = "2026-01-01T00:00:00+00:00"
+    store.save([m])
+    run_sleep(store)
+    ep = store.load()[0]["epistemic"]
+    assert ep["last_reviewed"] != "2026-01-01T00:00:00+00:00", "last_reviewed frozen"
+    assert ep["review_due"] > "2026-01-02", "expired memory left permanently overdue"
+
+
 def test_force_is_orthogonal_to_grade_and_scope(tmp_path):
     """in_force must never be smuggled into evidence_status."""
     m, _ = _drifting(tmp_path)

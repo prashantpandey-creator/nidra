@@ -253,14 +253,20 @@ def in_force(mem: Dict[str, Any], now: Optional[str] = None) -> bool:
     return True
 
 
-def grade(mem: Dict[str, Any]) -> Tuple[str, List[str], List[str]]:
+def grade(mem: Dict[str, Any], now: Optional[str] = None) -> Tuple[str, List[str], List[str]]:
     """Recompute the evidence grade of one memory.
 
     Returns (evidence_status, row_states, reasons).
+
+    ``now`` exists so a replay reads valid time at the replayed instant. It was
+    missing at first, which gave run_sleep two clocks: every other stage
+    honoured its injected ``now`` while this one read the wall clock, so
+    replaying a backfill at a date when a window was WIDE OPEN still skipped
+    the drift check because the window is shut *today*. Threaded now.
     """
     if not mem.get("evidence"):
         return "unverified", [], ["no evidence rows"]
-    if not in_force(mem):
+    if not in_force(mem, now):
         # The window closed. Its evidence NOT matching today's world is the
         # expected outcome, not a defect — re-checking it can only produce a
         # false drift report. Keep the last grade it earned while it was live.
