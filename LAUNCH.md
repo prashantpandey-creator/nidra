@@ -7,7 +7,7 @@ real store on 2026-08-23/24 and is cited in the repo's own commit history.
 
 ## Show HN
 
-**Title** (80 char limit — this is 74):
+**Title** (80 char limit — this is 77, counted, not estimated):
 
     Show HN: We measured our own AI memory system and 86% of it was unfalsifiable
 
