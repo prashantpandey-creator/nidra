@@ -124,7 +124,18 @@ def test_report_renders_markdown(tmp_path):
 
 # ---- the whole proof ------------------------------------------------------
 
-def test_demo_catches_every_planted_defect(tmp_path):
+def test_demo_catches_every_planted_defect(tmp_path, monkeypatch):
+    """The leak check must judge THIS run, not the repo's ambient state.
+
+    It read ``.nidra-demo`` relative to whatever cwd pytest happened to have.
+    Anyone running ``nidra demo`` by hand in the checkout left that directory
+    behind (it is gitignored, so nothing complained), and every later run of
+    the suite went red on residue it did not create. Measured 2026-08-25: red
+    on a clean tree at HEAD, green the moment the stale directory was removed.
+    A flake in the test that gates the release is worse than no gate — it
+    trains you to ignore the one red light that matters.
+    """
+    monkeypatch.chdir(tmp_path)               # own the cwd, so a leak is ours
     rc = run_demo(str(tmp_path / "demo"), strict=True, quiet=True)
     assert rc == 0, "a planted defect went uncaught"
     assert not os.path.exists(".nidra-demo")  # demo stays inside tmp_path

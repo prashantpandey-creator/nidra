@@ -15,8 +15,9 @@ re-verified against its source bytes, none drifted).
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 from functools import lru_cache
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from .store import sha256_text
 
@@ -211,6 +212,47 @@ def evidence_scope(mem: Dict[str, Any],
                key=lambda s: _SCOPE_RANK[s])
 
 
+def _ts(value: Any) -> Optional[datetime]:
+    """Parse an ISO timestamp, or return None. None means NOT CHECKABLE.
+
+    Every caller below must treat None as "no constraint", never as "expired".
+    A checker that cannot say "I don't know" says "broken" instead, and that
+    single mistake at six altitudes is most of this repo's bug history.
+    """
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def in_force(mem: Dict[str, Any], now: Optional[str] = None) -> bool:
+    """Is this memory's fact still true IN THE WORLD right now?
+
+    Orthogonal to grade (how well checked) and scope (checked against what).
+    Deliberately not folded into evidence_status: conflating two of those
+    three is exactly what reported 56% of the store as world-decidable when
+    the honest figure was 13%.
+
+    Open-ended by default. A memory with no temporal block, an unreadable
+    timestamp, or no end date is in force — the 632 memories written before
+    this field existed all take that path unchanged.
+    """
+    temporal = mem.get("temporal") or {}
+    if not isinstance(temporal, dict):
+        return True
+    at = _ts(now) or datetime.now(timezone.utc)
+    until = _ts(temporal.get("valid_until"))
+    if until is not None and until <= at:
+        return False
+    start = _ts(temporal.get("valid_from"))
+    if start is not None and start > at:
+        return False
+    return True
+
+
 def grade(mem: Dict[str, Any]) -> Tuple[str, List[str], List[str]]:
     """Recompute the evidence grade of one memory.
 
@@ -218,6 +260,12 @@ def grade(mem: Dict[str, Any]) -> Tuple[str, List[str], List[str]]:
     """
     if not mem.get("evidence"):
         return "unverified", [], ["no evidence rows"]
+    if not in_force(mem):
+        # The window closed. Its evidence NOT matching today's world is the
+        # expected outcome, not a defect — re-checking it can only produce a
+        # false drift report. Keep the last grade it earned while it was live.
+        held = mem.get("epistemic", {}).get("evidence_status") or "source_linked"
+        return held, [], ["outside its valid window; not re-checked"]
     states, reasons = [], []
     for ev in mem["evidence"]:
         state, reason = verify_evidence_row(ev)

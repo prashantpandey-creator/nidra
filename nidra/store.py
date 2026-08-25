@@ -72,7 +72,17 @@ def new_memory(
             "review_due": now,
         },
         "evidence": evidence,
-        "temporal": {"recorded_at": now, "superseded_by": None},
+        # Bi-temporal. recorded_at is TRANSACTION time (when we learned it);
+        # valid_from/valid_until are VALID time (when the fact holds in the
+        # world). valid_until is null by default and only ever set from a
+        # memory that states its own end — never inferred from "today", which
+        # would silently retire facts that are still in force.
+        "temporal": {
+            "recorded_at": now,
+            "valid_from": now,
+            "valid_until": None,
+            "superseded_by": None,
+        },
         "flags": [],
         "active": True,
     }

@@ -26,7 +26,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from .grade import evidence_scope, grade
+from .grade import evidence_scope, grade, in_force
 from .store import Store, normalize, utcnow
 
 REVIEW_INTERVALS_DAYS = [1, 3, 7, 14, 30, 90]
@@ -139,6 +139,13 @@ def run_sleep(store: Store, judge: Any = None, now: Optional[str] = None) -> Dic
             if _flag(m, "drifted"):
                 act("demoted", m["id"], "evidence drift: " + "; ".join(reasons))
             m["epistemic"]["confidence"] = min(m["epistemic"]["confidence"], 0.3)
+        elif not in_force(m):
+            # Valid time closed. grade() already declined to re-check it; the
+            # confidence floor and the review schedule below must not treat
+            # that silence as a fresh pass either. Leave it exactly as it was
+            # earned, and never let it reach the repair queue.
+            m["epistemic"]["evidence_scope"] = evidence_scope(m)
+            continue
         elif m["flags"] and "drifted" in m["flags"] and new_status == "machine_checked":
             m["flags"].remove("drifted")  # the world matches the memory again
         if new_status != old_status and "drifted" not in states:
